@@ -79,20 +79,35 @@ flowchart TD
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start: Running the Application
 
-### 1. Zero-Install Execution
-RoboSage is designed with **zero hard dependencies** (runs using Python 3.8+ standard library):
+### 1. Launch the Desktop Web Dashboard (Zero Installation Required)
+RoboSage includes a built-in, zero-dependency local web dashboard that automatically opens in your default browser:
 
 ```bash
-# Clone or navigate to the repository
-cd robosage
-
-# Run CLI directly
-python3 -m robosage.cli --help
+# Start the full visual application:
+python3 run.py
+# Or using the 1-click executable:
+./robosage-app
 ```
 
-### 2. Available Commands
+This launches the server at `http://127.0.0.1:8765/` and provides:
+- 💬 **Interactive AI Copilot**: Pair programming chat with quick diagnostic prompts.
+- 🛡️ **RoboAudit Workspace**: Paste or select code with 1-click example loader and colored hazard badges.
+- 📋 **Log & Crash Triage**: Paste `rosout` or terminal crash logs and get immediate actionable fixes.
+- 📡 **DDS QoS Matrix**: Interactive compatibility simulator for Publisher vs Subscriber policies.
+- ⚡ **Node Scaffolder**: Visual generator with parameter customization, live preview, and 1-click disk save.
+- 🩺 **System Doctor**: Real-time inspection of your local ROS 2 installation and environment.
+
+Options:
+```bash
+python3 run.py --port 9000      # Use custom port
+python3 run.py --no-browser     # Run headless/server mode on robot without opening browser
+python3 run.py --cli            # Launch terminal TUI directly
+```
+
+### 2. Command Line Interface (CLI)
+You can also invoke any diagnostic command directly from your terminal:
 
 #### 🩺 Run Environment Health Check
 ```bash
