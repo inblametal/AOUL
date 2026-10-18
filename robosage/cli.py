@@ -217,6 +217,9 @@ def cmd_generate(args):
             f.write(code)
         print(f"{Colors.GREEN}✅ Successfully generated safe template '{t_type}' at:{Colors.RESET} {out_path}")
     else:
+        print(code)
+
+
 def cmd_improve(args):
     """Uses local Qwen to refactor and optimize robotics code."""
     print_banner()
