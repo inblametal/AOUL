@@ -59,8 +59,17 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_doctor()
             return
 
+        if path == "/api/local-models":
+            self._handle_local_models()
+            return
+
         if path == "/api/examples":
             self._handle_examples()
+            return
+
+        if path == "/favicon.ico":
+            self.send_response(204)
+            self.end_headers()
             return
 
         # Fallback to standard static file handling from WEB_DIR
@@ -238,6 +247,18 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             "active_provider": provider.__class__.__name__,
         })
 
+    def _handle_local_models(self):
+        from robosage.llm.provider import get_installed_ollama_models, resolve_best_local_model
+        endpoint = os.environ.get("QWEN_ENDPOINT", "http://localhost:11434")
+        installed = get_installed_ollama_models(endpoint)
+        best = resolve_best_local_model(endpoint) if installed else "qwen2.5-coder:latest"
+        self._send_json({
+            "ollama_online": len(installed) > 0,
+            "installed_models": installed,
+            "best_model": best,
+            "endpoint": endpoint,
+        })
+
     def _handle_generate(self, body: Dict[str, Any]):
         template_type = body.get("template_type", "diff_drive").lower()
         node_name = body.get("node_name", f"safe_{template_type}_node")
@@ -364,7 +385,11 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """Clean single-line logging for server requests."""
-        sys.stderr.write(f"[{self.log_date_time_string()}] {args[0]} {args[1]} {args[2]}\n")
+        try:
+            msg = format % args
+        except Exception:
+            msg = " ".join(str(a) for a in args)
+        sys.stderr.write(f"[{self.log_date_time_string()}] {msg}\n")
 
 
 def start_server(host: str = "127.0.0.1", port: int = 8765):

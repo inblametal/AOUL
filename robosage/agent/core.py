@@ -51,10 +51,19 @@ class AgentSession:
             # If LLM provider fails, return diagnostic output if available
             if pre_tool_context:
                 return (
-                    f"⚠️ LLM generation failed ({e}), but RoboSage static diagnostics succeeded:\n\n"
+                    f"⚠️ Local AI connection note ({e}), but RoboSage static diagnostics succeeded:\n\n"
                     f"{pre_tool_context}"
                 )
-            return f"Error communicating with AI provider: {e}"
+            # Graceful fallback: RoboSage Offline Expert Intelligence
+            from robosage.llm.provider import OfflineRoboticsProvider
+            offline = OfflineRoboticsProvider()
+            offline_resp = offline.generate(user_input)
+            return (
+                f"> ℹ️ **RoboSage Connection Note:** `{e}`\n"
+                f"> *Tip: Ensure Ollama is active (`ollama serve`) with Qwen installed (`ollama pull qwen2.5-coder`).*\n\n"
+                f"**RoboSage Static Diagnostic Assistant Response:**\n\n"
+                f"{offline_resp.content}"
+            )
 
     def _evaluate_quick_tools(self, text: str) -> Optional[str]:
         """Runs relevant static analysis or triage if file paths or logs are detected in prompt."""

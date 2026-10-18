@@ -197,18 +197,62 @@ class AnthropicProvider(BaseLLMProvider):
             raise RuntimeError(f"Anthropic API Error ({e.code}): {err_body}")
 
 
-class OllamaProvider(BaseLLMProvider):
-    """Local Ollama Provider for offline on-robot intelligence."""
+def get_installed_ollama_models(host: str = "http://localhost:11434") -> List[str]:
+    """Queries Ollama for list of locally installed model names."""
+    try:
+        req = urllib.request.Request(f"{host}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=1.2) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+    except Exception:
+        return []
 
-    def __init__(self, host: str = "http://localhost:11434", model: str = "llama3:latest"):
+
+def resolve_best_local_model(host: str = "http://localhost:11434", requested: Optional[str] = None) -> str:
+    """Finds best matching model in Ollama, prioritizing Qwen."""
+    installed = get_installed_ollama_models(host)
+    if not installed:
+        return requested or "qwen2.5-coder:latest"
+
+    # If requested model matches an installed model, use it
+    if requested and requested not in ("auto", "qwen", "local"):
+        for m in installed:
+            if m.lower() == requested.lower() or m.lower().startswith(requested.lower() + ":"):
+                return m
+
+    # Priority 1: Qwen 2.5 Coder
+    for m in installed:
+        if "qwen2.5-coder" in m.lower():
+            return m
+    # Priority 2: Qwen 2.5
+    for m in installed:
+        if "qwen2.5" in m.lower():
+            return m
+    # Priority 3: Any Qwen
+    for m in installed:
+        if "qwen" in m.lower():
+            return m
+    # Priority 4: Any Coder model
+    for m in installed:
+        if "coder" in m.lower():
+            return m
+
+    return installed[0]
+
+
+class OllamaProvider(BaseLLMProvider):
+    """Local Ollama Provider with auto-discovery of Qwen and installed models."""
+
+    def __init__(self, host: str = "http://localhost:11434", model: Optional[str] = None):
         self.host = host.rstrip("/")
-        self.model = model
+        self.model = resolve_best_local_model(self.host, model)
 
     def generate(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
         history: Optional[List[ChatMessage]] = None,
+        _retried: bool = False,
     ) -> LLMResponse:
         url = f"{self.host}/api/chat"
 
@@ -235,14 +279,38 @@ class OllamaProvider(BaseLLMProvider):
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 text = result["message"]["content"]
-                return LLMResponse(content=text, provider="Ollama (Local)", model=self.model)
+                return LLMResponse(content=text, provider=f"Ollama ({self.model})", model=self.model)
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            try:
+                err_json = json.loads(err_body)
+                err_msg = err_json.get("error", err_body)
+            except Exception:
+                err_msg = err_body
+
+            # Self-healing: if 404 model not found, auto-discover installed models and retry
+            if (e.code == 404 or "not found" in err_msg.lower()) and not _retried:
+                installed = get_installed_ollama_models(self.host)
+                if installed:
+                    best = resolve_best_local_model(self.host)
+                    target = best if best != self.model else installed[0]
+                    if target != self.model:
+                        self.model = target
+                        return self.generate(prompt, system_prompt=system_prompt, history=history, _retried=True)
+                raise RuntimeError(
+                    f"Model '{self.model}' not found in Ollama. "
+                    f"Installed models: {installed or 'none'}. Run: `ollama pull qwen2.5-coder`."
+                )
+
+            raise RuntimeError(f"Ollama Error ({e.code}): {err_msg}")
         except urllib.error.URLError as e:
+            reason = getattr(e, 'reason', e)
             raise RuntimeError(
-                f"Could not connect to local Ollama server at {self.host}. "
-                f"Make sure Ollama is running (`ollama serve`). Error: {e}"
+                f"Could not connect to Ollama server at {self.host} ({reason}). "
+                f"Make sure Ollama is running (`ollama serve`)."
             )
 
 
@@ -259,37 +327,14 @@ class QwenProvider(BaseLLMProvider):
         model: Optional[str] = None,
     ):
         self.endpoint = (endpoint or os.environ.get("QWEN_ENDPOINT", "http://localhost:11434")).rstrip("/")
-        self.model = model or os.environ.get("QWEN_MODEL") or self._autodetect_qwen_model()
-
-    def _autodetect_qwen_model(self) -> str:
-        """Queries local Ollama tags to find any installed Qwen variant."""
-        try:
-            req = urllib.request.Request(f"{self.endpoint}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=1.0) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                models = [m.get("name", "") for m in data.get("models", [])]
-                
-                # Priority: Qwen 2.5 Coder > Qwen 2.5 > Qwen2 > any Qwen
-                for m in models:
-                    if "qwen2.5-coder" in m.lower():
-                        return m
-                for m in models:
-                    if "qwen2.5" in m.lower():
-                        return m
-                for m in models:
-                    if "qwen" in m.lower():
-                        return m
-                if models:
-                    return models[0]
-        except Exception:
-            pass
-        return "qwen2.5-coder:latest"
+        self.model = resolve_best_local_model(self.endpoint, model or os.environ.get("QWEN_MODEL"))
 
     def generate(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
         history: Optional[List[ChatMessage]] = None,
+        _retried: bool = False,
     ) -> LLMResponse:
         from robosage.agent.prompts import QWEN_ROBOTICS_CODE_IMPROVER_PROMPT
         effective_sys = system_prompt or QWEN_ROBOTICS_CODE_IMPROVER_PROMPT
@@ -335,10 +380,34 @@ class QwenProvider(BaseLLMProvider):
                     result = json.loads(resp.read().decode("utf-8"))
                     text = result["message"]["content"]
                     return LLMResponse(content=text, provider=f"Qwen ({self.model})", model=self.model)
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode("utf-8", errors="ignore")
+                try:
+                    err_json = json.loads(err_body)
+                    err_msg = err_json.get("error", err_body)
+                except Exception:
+                    err_msg = err_body
+
+                # If 404 model not found, auto-switch to installed model and retry
+                if (e.code == 404 or "not found" in err_msg.lower()) and not _retried:
+                    installed = get_installed_ollama_models(self.endpoint)
+                    if installed:
+                        best = resolve_best_local_model(self.endpoint)
+                        target = best if best != self.model else installed[0]
+                        if target != self.model:
+                            self.model = target
+                            return self.generate(prompt, system_prompt=system_prompt, history=history, _retried=True)
+                    raise RuntimeError(
+                        f"Model '{self.model}' not found in Ollama. "
+                        f"Installed models: {installed or 'none'}. Run: `ollama pull qwen2.5-coder`."
+                    )
+
+                raise RuntimeError(f"Qwen Ollama Error ({e.code}): {err_msg}")
             except urllib.error.URLError as e:
+                reason = getattr(e, 'reason', e)
                 raise RuntimeError(
-                    f"Could not connect to Qwen at {self.endpoint}. "
-                    f"Ensure Ollama or your local model server is running (`ollama run {self.model}`). Error: {e}"
+                    f"Could not connect to Qwen at {self.endpoint} ({reason}). "
+                    f"Ensure Ollama is running (`ollama serve`)."
                 )
 
     def improve_code(self, code: str, focus: str = "all") -> str:

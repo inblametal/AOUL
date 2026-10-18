@@ -1118,6 +1118,51 @@
       }
     }
 
+    // ==========================================
+    // LOCAL MODEL DISCOVERY
+    // ==========================================
+    async function loadLocalModels() {
+      try {
+        const resp = await fetch('/api/local-models');
+        const data = await resp.json();
+        const select = document.getElementById('model-select');
+        const refactorSelect = document.getElementById('refactor-model');
+
+        if (data.installed_models && data.installed_models.length > 0) {
+          const bestModel = data.best_model;
+          const qwenOpt = select.querySelector('option[value="qwen"]');
+          if (qwenOpt) {
+            qwenOpt.innerText = `Qwen (${bestModel}) - Local`;
+          }
+
+          if (refactorSelect) {
+            refactorSelect.innerHTML = '';
+            data.installed_models.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m;
+              opt.innerText = m;
+              if (m === bestModel) opt.selected = true;
+              refactorSelect.appendChild(opt);
+            });
+          }
+
+          const badge = document.getElementById('active-provider-badge');
+          if (badge) {
+            badge.innerText = `Qwen (${bestModel})`;
+            badge.className = 'font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded text-[10px]';
+          }
+        } else {
+          // Ollama running but no model or offline
+          const qwenOpt = select.querySelector('option[value="qwen"]');
+          if (qwenOpt && !data.ollama_online) {
+            qwenOpt.innerText = 'Qwen (Offline - Heuristic Mode)';
+          }
+        }
+      } catch (err) {
+        console.warn('Could not auto-fetch local models:', err);
+      }
+    }
+
     // Utility helpers
     function escapeHtml(str) {
       if (!str) return '';
@@ -1131,8 +1176,9 @@
         .replace(/`([^`]+)`/g, '<code class="bg-slate-800 px-1 py-0.5 rounded text-cyan-300 font-mono">$1</code>');
     }
 
-    // Initialize doctor on startup
+    // Initialize doctor and models on startup
     loadDoctorReport();
+    loadLocalModels();
   </script>
 </body>
 </html>
