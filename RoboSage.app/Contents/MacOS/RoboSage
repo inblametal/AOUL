@@ -22,27 +22,43 @@ if [ -z "$PYTHON_BIN" ]; then
     exit 1
 fi
 
-# 2. Resolve project directory inside bundle
-APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
-ROBO_DIR="$APP_DIR/Resources/robosage"
-if [ ! -d "$ROBO_DIR" ]; then
+# 2. Resolve project directory (prefer live workspace, fallback to bundle)
+if [ -d "/Users/apple/.gemini/antigravity/scratch/robosage" ]; then
     ROBO_DIR="/Users/apple/.gemini/antigravity/scratch/robosage"
+else
+    APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+    ROBO_DIR="$APP_DIR/Resources/robosage"
 fi
 
-# 3. Check if server is already responding on port 8765
-if ! curl -s -m 1 "$URL" >/dev/null 2>&1; then
-    mkdir -p "$HOME/Library/Logs/RoboSage"
-    cd "$ROBO_DIR"
-    ( nohup "$PYTHON_BIN" "$ROBO_DIR/run.py" --no-browser --port $PORT > "$HOME/Library/Logs/RoboSage/server.log" 2>&1 & )
-    
-    # Wait up to 6 seconds for server to start responding
-    for i in {1..30}; do
-        if curl -s -m 1 "$URL" >/dev/null 2>&1; then
-            break
-        fi
-        sleep 0.2
-    done
+# 3. Ensure Ollama 24/7 service is running
+mkdir -p "$HOME/Library/Logs/Ollama"
+if [ -f "$HOME/Library/LaunchAgents/com.ollama.serve.plist" ]; then
+    launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.ollama.serve.plist" 2>/dev/null || launchctl load "$HOME/Library/LaunchAgents/com.ollama.serve.plist" 2>/dev/null
 fi
+
+if ! curl -s -m 1 "http://localhost:11434/api/tags" >/dev/null 2>&1; then
+    if [ -x "/usr/local/bin/ollama" ]; then
+        ( nohup /usr/local/bin/ollama serve > "$HOME/Library/Logs/Ollama/serve.log" 2>&1 & )
+    elif [ -d "/Applications/Ollama.app" ]; then
+        open -ga Ollama
+    fi
+fi
+
+# 4. Always ensure latest server code is active
+mkdir -p "$HOME/Library/Logs/RoboSage"
+lsof -ti :$PORT | xargs kill -9 2>/dev/null
+sleep 0.5
+
+cd "$ROBO_DIR"
+( nohup "$PYTHON_BIN" "$ROBO_DIR/run.py" --no-browser --port $PORT > "$HOME/Library/Logs/RoboSage/server.log" 2>&1 & )
+
+# Wait up to 6 seconds for server to start responding
+for i in {1..30}; do
+    if curl -s -m 1 "$URL" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 0.2
+done
 
 # 4. Open in dedicated standalone app window
 PROFILE_DIR="$HOME/Library/Application Support/RoboSage/Profile"
