@@ -32,14 +32,14 @@ EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     """Custom request handler dispatching REST APIs and serving UI assets."""
 
-    def __init__(self, *args, **kwargs):
-        # Initializing singletons on the server instance
+    def setup(self):
+        super().setup()
+        self.directory = str(WEB_DIR)
         if not hasattr(self.server, "agent_session"):
             self.server.llm_provider = get_llm_provider()
             self.server.agent_session = AgentSession(provider=self.server.llm_provider)
             self.server.log_analyzer = ROS2LogAnalyzer()
             self.server.loophole_detector = LoopholeDetector()
-        super().__init__(*args, directory=str(WEB_DIR), **kwargs)
 
     def do_OPTIONS(self):
         """Handle CORS pre-flight requests."""
@@ -331,6 +331,10 @@ def start_server(host: str = "127.0.0.1", port: int = 8765):
     """Starts the RoboSage application HTTP server."""
     server_address = (host, port)
     httpd = HTTPServer(server_address, RoboSageRequestHandler)
+    httpd.llm_provider = get_llm_provider()
+    httpd.agent_session = AgentSession(provider=httpd.llm_provider)
+    httpd.log_analyzer = ROS2LogAnalyzer()
+    httpd.loophole_detector = LoopholeDetector()
     print(f"🚀 RoboSage Application Server running at http://{host}:{port}/")
     try:
         httpd.serve_forever()

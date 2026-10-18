@@ -29,20 +29,15 @@ if [ ! -d "$ROBO_DIR" ]; then
     ROBO_DIR="/Users/apple/.gemini/antigravity/scratch/robosage"
 fi
 
-# 3. Check if server is already running on port 8765
-SERVER_RUNNING=0
-if lsof -i :$PORT >/dev/null 2>&1 || nc -z 127.0.0.1 $PORT >/dev/null 2>&1; then
-    SERVER_RUNNING=1
-fi
-
-if [ $SERVER_RUNNING -eq 0 ]; then
+# 3. Check if server is already responding on port 8765
+if ! curl -s -m 1 "$URL" >/dev/null 2>&1; then
     mkdir -p "$HOME/Library/Logs/RoboSage"
     cd "$ROBO_DIR"
-    nohup "$PYTHON_BIN" "$ROBO_DIR/run.py" --no-browser --port $PORT > "$HOME/Library/Logs/RoboSage/server.log" 2>&1 &
+    ( nohup "$PYTHON_BIN" "$ROBO_DIR/run.py" --no-browser --port $PORT > "$HOME/Library/Logs/RoboSage/server.log" 2>&1 & )
     
-    # Wait up to 5 seconds for server to start responding
-    for i in {1..25}; do
-        if lsof -i :$PORT >/dev/null 2>&1 || nc -z 127.0.0.1 $PORT >/dev/null 2>&1; then
+    # Wait up to 6 seconds for server to start responding
+    for i in {1..30}; do
+        if curl -s -m 1 "$URL" >/dev/null 2>&1; then
             break
         fi
         sleep 0.2
@@ -53,28 +48,24 @@ fi
 PROFILE_DIR="$HOME/Library/Application Support/RoboSage/Profile"
 mkdir -p "$PROFILE_DIR"
 
-CHROME_BIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-EDGE_BIN="/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
-BRAVE_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
-
-if [ -x "$CHROME_BIN" ]; then
-    exec "$CHROME_BIN" \
+if [ -d "/Applications/Google Chrome.app" ]; then
+    open -na "Google Chrome" --args \
         --app="$URL" \
         --user-data-dir="$PROFILE_DIR" \
         --window-size=1380,920 \
         --no-first-run \
         --no-default-browser-check
-elif [ -x "$EDGE_BIN" ]; then
-    exec "$EDGE_BIN" \
+elif [ -d "/Applications/Microsoft Edge.app" ]; then
+    open -na "Microsoft Edge" --args \
         --app="$URL" \
         --user-data-dir="$PROFILE_DIR" \
         --window-size=1380,920
-elif [ -x "$BRAVE_BIN" ]; then
-    exec "$BRAVE_BIN" \
+elif [ -d "/Applications/Brave Browser.app" ]; then
+    open -na "Brave Browser" --args \
         --app="$URL" \
         --user-data-dir="$PROFILE_DIR" \
         --window-size=1380,920
 else
-    # Fallback to Safari or default browser
+    # Fallback to default browser
     open "$URL"
 fi
