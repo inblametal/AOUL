@@ -1,0 +1,80 @@
+#!/bin/bash
+# RoboSage Native macOS Window Launcher
+
+PORT=8765
+URL="http://127.0.0.1:$PORT/"
+
+# 1. Locate Python 3 binary
+PYTHON_BIN=""
+for cand in "/Library/Frameworks/Python.framework/Versions/Current/bin/python3" \
+            "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3" \
+            "/opt/homebrew/bin/python3" \
+            "/usr/local/bin/python3" \
+            "$(which python3 2>/dev/null)"; do
+    if [ -x "$cand" ]; then
+        PYTHON_BIN="$cand"
+        break
+    fi
+done
+
+if [ -z "$PYTHON_BIN" ]; then
+    osascript -e 'display alert "Python 3 Required" message "Python 3 was not found. Please install Python 3 to run RoboSage."'
+    exit 1
+fi
+
+# 2. Resolve project directory inside bundle
+APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+ROBO_DIR="$APP_DIR/Resources/robosage"
+if [ ! -d "$ROBO_DIR" ]; then
+    ROBO_DIR="/Users/apple/.gemini/antigravity/scratch/robosage"
+fi
+
+# 3. Check if server is already running on port 8765
+SERVER_RUNNING=0
+if lsof -i :$PORT >/dev/null 2>&1 || nc -z 127.0.0.1 $PORT >/dev/null 2>&1; then
+    SERVER_RUNNING=1
+fi
+
+if [ $SERVER_RUNNING -eq 0 ]; then
+    mkdir -p "$HOME/Library/Logs/RoboSage"
+    cd "$ROBO_DIR"
+    nohup "$PYTHON_BIN" "$ROBO_DIR/run.py" --no-browser --port $PORT > "$HOME/Library/Logs/RoboSage/server.log" 2>&1 &
+    
+    # Wait up to 5 seconds for server to start responding
+    for i in {1..25}; do
+        if lsof -i :$PORT >/dev/null 2>&1 || nc -z 127.0.0.1 $PORT >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.2
+    done
+fi
+
+# 4. Open in dedicated standalone app window
+PROFILE_DIR="$HOME/Library/Application Support/RoboSage/Profile"
+mkdir -p "$PROFILE_DIR"
+
+CHROME_BIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+EDGE_BIN="/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+BRAVE_BIN="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+
+if [ -x "$CHROME_BIN" ]; then
+    exec "$CHROME_BIN" \
+        --app="$URL" \
+        --user-data-dir="$PROFILE_DIR" \
+        --window-size=1380,920 \
+        --no-first-run \
+        --no-default-browser-check
+elif [ -x "$EDGE_BIN" ]; then
+    exec "$EDGE_BIN" \
+        --app="$URL" \
+        --user-data-dir="$PROFILE_DIR" \
+        --window-size=1380,920
+elif [ -x "$BRAVE_BIN" ]; then
+    exec "$BRAVE_BIN" \
+        --app="$URL" \
+        --user-data-dir="$PROFILE_DIR" \
+        --window-size=1380,920
+else
+    # Fallback to Safari or default browser
+    open "$URL"
+fi
