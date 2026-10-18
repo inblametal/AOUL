@@ -1,0 +1,8 @@
+[INFO] [1729252800.010200300] [robot_bringup]: Starting differential drive robot bringup...
+[WARN] [1729252800.051230400] [rclcpp]: New publisher discovered on topic '/scan', offering incompatible QoS. Incompatible QoS settings on topic '/scan': Reliability requested: RELIABLE, offered: BEST_EFFORT
+[WARN] [1729252800.120450600] [tf2_ros]: Lookup would require extrapolation into the future. Requested time 1729252800.100000 but the latest data is at time 1729252800.050000, when looking up transform from frame [base_link] to frame [odom]
+[ERROR] [1729252800.180900100] [nav2_controller]: Failed to make progress. Goal tolerance unreachable.
+Traceback (most recent call last):
+  File "/workspace/src/my_robot/my_robot/vision_node.py", line 42, in process_image
+    depth_val = depth_image[center_y, center_x]
+IndexError: index 480 is out of bounds for axis 0 with size 480
