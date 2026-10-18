@@ -246,6 +246,120 @@ class OllamaProvider(BaseLLMProvider):
             )
 
 
+class QwenProvider(BaseLLMProvider):
+    """
+    Local Qwen Provider for Robotics & Code Improvement.
+    Auto-detects installed Qwen models (e.g. qwen2.5-coder, qwen2.5, qwen2)
+    via Ollama or local OpenAI-compatible endpoints (LM Studio, vLLM).
+    """
+
+    def __init__(
+        self,
+        endpoint: Optional[str] = None,
+        model: Optional[str] = None,
+    ):
+        self.endpoint = (endpoint or os.environ.get("QWEN_ENDPOINT", "http://localhost:11434")).rstrip("/")
+        self.model = model or os.environ.get("QWEN_MODEL") or self._autodetect_qwen_model()
+
+    def _autodetect_qwen_model(self) -> str:
+        """Queries local Ollama tags to find any installed Qwen variant."""
+        try:
+            req = urllib.request.Request(f"{self.endpoint}/api/tags", method="GET")
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                models = [m.get("name", "") for m in data.get("models", [])]
+                
+                # Priority: Qwen 2.5 Coder > Qwen 2.5 > Qwen2 > any Qwen
+                for m in models:
+                    if "qwen2.5-coder" in m.lower():
+                        return m
+                for m in models:
+                    if "qwen2.5" in m.lower():
+                        return m
+                for m in models:
+                    if "qwen" in m.lower():
+                        return m
+                if models:
+                    return models[0]
+        except Exception:
+            pass
+        return "qwen2.5-coder:latest"
+
+    def generate(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        history: Optional[List[ChatMessage]] = None,
+    ) -> LLMResponse:
+        from robosage.agent.prompts import QWEN_ROBOTICS_CODE_IMPROVER_PROMPT
+        effective_sys = system_prompt or QWEN_ROBOTICS_CODE_IMPROVER_PROMPT
+
+        # Check if endpoint is OpenAI-compatible (/v1, :1234, :8000)
+        is_openai_compat = "/v1" in self.endpoint or ":1234" in self.endpoint or ":8000" in self.endpoint
+
+        if is_openai_compat:
+            url = f"{self.endpoint}/chat/completions" if "/v1" in self.endpoint else f"{self.endpoint}/v1/chat/completions"
+            messages = [{"role": "system", "content": effective_sys}]
+            if history:
+                for msg in history:
+                    messages.append({"role": msg.role, "content": msg.content})
+            messages.append({"role": "user", "content": prompt})
+
+            payload = {"model": self.model, "messages": messages, "temperature": 0.2}
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+                    text = result["choices"][0]["message"]["content"]
+                    return LLMResponse(content=text, provider=f"Qwen ({self.model})", model=self.model)
+            except Exception as e:
+                raise RuntimeError(f"Qwen Local Server Error: {e}")
+
+        else:
+            # Default to Ollama API
+            url = f"{self.endpoint}/api/chat"
+            messages = [{"role": "system", "content": effective_sys}]
+            if history:
+                for msg in history:
+                    messages.append({"role": msg.role, "content": msg.content})
+            messages.append({"role": "user", "content": prompt})
+
+            payload = {"model": self.model, "messages": messages, "stream": False}
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+                    text = result["message"]["content"]
+                    return LLMResponse(content=text, provider=f"Qwen ({self.model})", model=self.model)
+            except urllib.error.URLError as e:
+                raise RuntimeError(
+                    f"Could not connect to Qwen at {self.endpoint}. "
+                    f"Ensure Ollama or your local model server is running (`ollama run {self.model}`). Error: {e}"
+                )
+
+    def improve_code(self, code: str, focus: str = "all") -> str:
+        """Specialized robotics code refactoring pipeline."""
+        prompt = (
+            f"Please inspect, audit, refactor, and improve the following ROS 2 robotics code.\n"
+            f"Focus area: {focus.upper()}\n\n"
+            f"```\n{code}\n```\n\n"
+            f"Apply production-grade robotics standards:\n"
+            f"- Failsafe E-Stop on shutdown for cmd_vel/Twist publishers\n"
+            f"- Watchdog timer for sensor streams\n"
+            f"- Filter NaNs/Infs on sensor ranges\n"
+            f"- Prevent SingleThreadedExecutor service deadlocks (use async)\n"
+            f"- Use proper QoS (SensorDataQoS for sensors)\n"
+            f"- Wrap shared state in mutex locks if multi-threaded\n"
+            f"- Output the complete improved code and bulleted improvements."
+        )
+        resp = self.generate(prompt)
+        return resp.content
+
+
 class OfflineRoboticsProvider(BaseLLMProvider):
     """
     Zero-network offline diagnostic intelligence.
@@ -300,7 +414,7 @@ class OfflineRoboticsProvider(BaseLLMProvider):
                 "- `export GEMINI_API_KEY='your_key'`\n"
                 "- `export OPENAI_API_KEY='your_key'`\n"
                 "- `export ANTHROPIC_API_KEY='your_key'`\n"
-                "- Or run local Ollama (`ollama run llama3`)."
+                "- Or connect local Qwen (`ollama run qwen2.5-coder`)."
             )
 
         return LLMResponse(content=response, provider="RoboSage Heuristic Engine (Offline)", model="robotics-rules-v1")
@@ -310,9 +424,14 @@ def get_llm_provider(
     provider_name: Optional[str] = None,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
+    endpoint: Optional[str] = None,
 ) -> BaseLLMProvider:
     """Factory to create appropriate LLM provider with automatic fallback detection."""
     name = (provider_name or os.environ.get("ROBOSAGE_LLM_PROVIDER", "auto")).lower()
+
+    # 1. Direct Qwen selection
+    if name == "qwen":
+        return QwenProvider(endpoint=endpoint, model=model)
 
     if name == "gemini" or (name == "auto" and os.environ.get("GEMINI_API_KEY")):
         return GeminiProvider(api_key=api_key, model=model or "gemini-1.5-flash")
@@ -324,15 +443,25 @@ def get_llm_provider(
         return AnthropicProvider(api_key=api_key, model=model or "claude-3-5-sonnet-20241022")
 
     if name in ("ollama", "local"):
-        return OllamaProvider(model=model or "llama3:latest")
+        return QwenProvider(endpoint=endpoint, model=model)
 
-    # If auto, check if local Ollama server is responding
+    # If auto, check if local Qwen/Ollama server is responding
     if name == "auto":
+        # Check Ollama on port 11434
         try:
             req = urllib.request.Request("http://localhost:11434/api/tags", method="GET")
             with urllib.request.urlopen(req, timeout=0.8) as resp:
                 if resp.status == 200:
-                    return OllamaProvider(model=model or "llama3:latest")
+                    return QwenProvider(endpoint="http://localhost:11434", model=model)
+        except Exception:
+            pass
+
+        # Check LM Studio on port 1234
+        try:
+            req = urllib.request.Request("http://localhost:1234/v1/models", method="GET")
+            with urllib.request.urlopen(req, timeout=0.8) as resp:
+                if resp.status == 200:
+                    return QwenProvider(endpoint="http://localhost:1234/v1", model=model)
         except Exception:
             pass
 

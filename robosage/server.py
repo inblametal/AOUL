@@ -88,6 +88,8 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_check_qos(body)
         elif path == "/api/generate":
             self._handle_generate(body)
+        elif path == "/api/refactor":
+            self._handle_refactor(body)
         elif path == "/api/save-file":
             self._handle_save_file(body)
         else:
@@ -256,6 +258,44 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             "node_name": node_name,
             "code": code,
         })
+
+    def _handle_refactor(self, body: Dict[str, Any]):
+        from robosage.llm.provider import QwenProvider
+        code = body.get("code", "").strip()
+        focus = body.get("focus", "all")
+        model = body.get("model")
+        endpoint = body.get("endpoint")
+
+        if not code:
+            self._send_json({"error": "No code provided to improve."}, status=400)
+            return
+
+        qwen = QwenProvider(endpoint=endpoint, model=model)
+        try:
+            improved = qwen.improve_code(code, focus=focus)
+            self._send_json({
+                "improved_code": improved,
+                "model": qwen.model,
+                "provider": f"Qwen ({qwen.model})",
+            })
+        except Exception as e:
+            # If Qwen server connection fails, provide offline improvement guidance
+            fallback_prompt = (
+                f"⚠️ Could not reach local Qwen at {qwen.endpoint} ({e}).\n\n"
+                f"To start local Qwen, run: `ollama run qwen2.5-coder` or open your local model runner.\n\n"
+                f"**Static Robotics Safety Recommendations for your code:**\n"
+                f"1. Ensure zero-velocity Twist(0,0,0) is commanded before node shutdown.\n"
+                f"2. Wrap all `tf_buffer.lookup_transform` calls in `try...except TransformException`.\n"
+                f"3. Do not invoke `client.call()` synchronously inside timer/subscription callbacks.\n"
+                f"4. Add a watchdog check to halt motors if incoming sensor data is older than 0.5s.\n"
+                f"5. Filter `math.isnan()` and `math.isinf()` from laser ranges."
+            )
+            self._send_json({
+                "improved_code": fallback_prompt,
+                "model": "offline-fallback",
+                "provider": "RoboSage Heuristic Fallback",
+                "warning": str(e),
+            })
 
     def _handle_save_file(self, body: Dict[str, Any]):
         path_str = body.get("path")

@@ -22,15 +22,20 @@ RoboSage automates robotics workflows, triages runtime crashes, intercepts broke
    - Diagnoses DDS Request vs. Offered (RxO) Quality of Service (QoS) mismatches.
    - Generates instant, drop-in code fixes.
 
-3. **Live Stream Monitor (`robosage watch`)**
+3. **Qwen Robotics Code Optimizer & Refactor (`robosage improve`)**
+   - Directly embeds your local **Qwen** model (e.g. `qwen2.5-coder`, `qwen2.5`) via Ollama (`http://localhost:11434`) or LM Studio (`http://localhost:1234`).
+   - Automatically audits raw or buggy ROS 2 Python/C++ code and refactors it into production-grade nodes.
+   - Injects failsafe zero-velocity E-Stops, sensor watchdog timers, thread-safe mutex guards, and NaN/Inf filters.
+
+4. **Live Stream Monitor (`robosage watch`)**
    - Tails `~/.ros/log/latest/launch.log` or monitors piped streams in real-time (`ros2 launch ... | robosage watch`).
    - Surfaces instant alerts with root cause analysis when warnings or errors spike.
 
-4. **Multi-Provider AI Intelligence (`robosage chat`)**
-   - Works with **Google Gemini**, **OpenAI**, **Claude**, and **Local Ollama** (for air-gapped, on-robot compute).
-   - Includes a **Zero-Network Heuristic Fallback Engine** so it functions 100% offline without any API keys.
+5. **Multi-Provider AI Intelligence (`robosage chat`)**
+   - **Local Qwen** (default local powerhouse for coding & robotics architecture).
+   - Also supports **Google Gemini**, **OpenAI**, **Claude**, and a built-in offline rules engine.
 
-5. **Safe Robotics Boilerplate Generator (`robosage generate`)**
+6. **Safe Robotics Boilerplate Generator (`robosage generate`)**
    - Scaffolds hardened, production-ready differential drive controllers, TF listeners, and thread-safe reentrant nodes.
 
 ---

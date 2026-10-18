@@ -65,6 +65,10 @@
           <i data-lucide="message-square" class="w-4 h-4"></i>
           <span>AI Copilot</span>
         </button>
+        <button onclick="switchTab('improve')" id="nav-improve" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="wrench" class="w-4 h-4 text-emerald-400"></i>
+          <span>Qwen Code Improver</span>
+        </button>
         <button onclick="switchTab('audit')" id="nav-audit" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="shield-alert" class="w-4 h-4"></i>
           <span>RoboAudit (Loopholes)</span>
@@ -95,7 +99,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           Engine Online
         </span>
-        <span id="active-provider-badge" class="font-mono text-[10px] text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/50">Offline Rules</span>
+        <span id="active-provider-badge" class="font-mono text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/50">Qwen Ready</span>
       </div>
       <div class="text-[11px] text-slate-500 truncate" id="ws-status-text">
         Workspace: Local Mode
@@ -117,12 +121,13 @@
 
       <!-- Settings / Model Selector -->
       <div class="flex items-center gap-2.5 text-xs">
-        <select id="model-select" class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-cyan-500 font-mono">
+        <select id="model-select" class="bg-slate-800 border border-slate-700 text-emerald-300 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500 font-mono">
+          <option value="qwen" selected>Qwen (Local - Robotics Code Improver)</option>
           <option value="auto">Auto (Smart Fallback)</option>
           <option value="gemini">Google Gemini 1.5</option>
           <option value="openai">OpenAI GPT-4o</option>
           <option value="anthropic">Claude 3.5 Sonnet</option>
-          <option value="ollama">Local Ollama (Robot)</option>
+          <option value="ollama">Local Ollama</option>
         </select>
         <button onclick="toggleSettingsModal()" class="px-2.5 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 flex items-center gap-1.5 transition-colors">
           <i data-lucide="settings" class="w-3.5 h-3.5"></i>
@@ -169,6 +174,79 @@
             </button>
           </div>
         </form>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB: QWEN CODE IMPROVER -->
+      <!-- ========================================== -->
+      <section id="tab-improve" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="wrench" class="w-5 h-5 text-emerald-400"></i>
+              Qwen Robotics Code Optimizer & Refactor
+            </h3>
+            <p class="text-xs text-slate-400">Powered by your local Qwen model. Hardens nodes with E-Stops, watchdogs, mutex locks, and NaN sanitization.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="loadExampleBuggyToImprove()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              <span>Load Buggy Node</span>
+            </button>
+            <button onclick="improveCodeWithQwen()" id="improve-btn" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Improve with Qwen</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-slate-400 mb-1">Optimization Focus</label>
+            <select id="improve-focus" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+              <option value="all">Full Overhaul (Safety, Concurrency, QoS, & Performance)</option>
+              <option value="safety">Safety & Hardware Protection (E-Stops, Watchdogs, NaNs)</option>
+              <option value="concurrency">Concurrency & Deadlocks (Async Services, Mutexes)</option>
+              <option value="performance">Real-Time Performance (Zero-Copy, Timers vs Sleep)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Local Model Backend</label>
+            <input type="text" id="improve-model-name" placeholder="Auto-detected (e.g. qwen2.5-coder)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Save Path (Optional)</label>
+            <div class="flex gap-2">
+              <input type="text" id="improve-save-path" placeholder="./improved_node.py" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono">
+              <button onclick="saveImprovedCode()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-emerald-300">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[450px]">
+          <!-- Input Original Code -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-mono text-slate-300">Original Code (Python / C++)</span>
+              <span class="text-[11px] text-slate-500">Paste code to improve</span>
+            </div>
+            <textarea id="improve-code-input" class="w-full flex-1 p-4 bg-transparent font-mono text-xs text-slate-200 outline-none resize-none custom-scroll" placeholder="# Paste your unoptimized or buggy ROS 2 code here..."></textarea>
+          </div>
+
+          <!-- Qwen Improved Code Output -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-mono text-emerald-400 flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                Qwen Production-Grade Refactor
+              </span>
+              <button onclick="copyImprovedCode()" class="hover:text-white flex items-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> Copy
+              </button>
+            </div>
+            <textarea id="improve-code-output" readonly class="w-full flex-1 p-4 bg-slate-950/40 font-mono text-xs text-emerald-300 outline-none resize-none custom-scroll" placeholder="Click 'Improve with Qwen' to generate hardened robotics code..."></textarea>
+          </div>
+        </div>
       </section>
 
       <!-- ========================================== -->
@@ -524,6 +602,7 @@
       // Update Header Title
       const titles = {
         chat: '<i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i> AI Senior Robotics Engineer & Diagnostic Copilot',
+        improve: '<i data-lucide="wrench" class="w-4 h-4 text-emerald-400"></i> Qwen Robotics Code Optimizer & Refactor',
         audit: '<i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i> RoboAudit: AST & Concurrency Loophole Fuzzer',
         triage: '<i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i> ROS 2 Log & Runtime Crash Triage Engine',
         qos: '<i data-lucide="wifi" class="w-4 h-4 text-cyan-400"></i> DDS Quality of Service (QoS) RxO Matrix',
@@ -536,6 +615,98 @@
       if (tabId === 'doctor') loadDoctorReport();
       if (tabId === 'qos') runQoSCheck();
       if (tabId === 'generator' && !document.getElementById('gen-code-preview').value) generateTemplate();
+    }
+
+    // ==========================================
+    // QWEN CODE IMPROVER MODULE
+    // ==========================================
+    async function loadExampleBuggyToImprove() {
+      try {
+        const resp = await fetch('/api/examples');
+        const data = await resp.json();
+        if (data.buggy_code) {
+          document.getElementById('improve-code-input').value = data.buggy_code;
+        }
+      } catch (err) {
+        alert('Could not load example code: ' + err);
+      }
+    }
+
+    async function improveCodeWithQwen() {
+      const code = document.getElementById('improve-code-input').value.trim();
+      const focus = document.getElementById('improve-focus').value;
+      const customModel = document.getElementById('improve-model-name').value.trim();
+
+      if (!code) {
+        alert('Please paste or write some robotics code to improve.');
+        return;
+      }
+
+      const out = document.getElementById('improve-code-output');
+      const btn = document.getElementById('improve-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Optimizing with Qwen...</span>';
+      lucide.createIcons();
+      out.value = 'Analyzing robotics architecture and generating production refactor with Qwen...\n(Injecting E-stops, watchdogs, mutex locks, and NaN filters)';
+
+      try {
+        const resp = await fetch('/api/refactor', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            code: code,
+            focus: focus,
+            model: customModel || undefined
+          })
+        });
+        const data = await resp.json();
+        if (data.improved_code) {
+          out.value = data.improved_code;
+          if (data.model) {
+            document.getElementById('improve-model-name').placeholder = `Active: ${data.model}`;
+          }
+        } else {
+          out.value = `⚠️ Error: ${data.error || 'Failed to improve code'}`;
+        }
+      } catch (err) {
+        out.value = `⚠️ Network/Connection Error: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Improve with Qwen</span>';
+        lucide.createIcons();
+      }
+    }
+
+    function copyImprovedCode() {
+      const text = document.getElementById('improve-code-output').value;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Improved code copied to clipboard!');
+      });
+    }
+
+    async function saveImprovedCode() {
+      const path = document.getElementById('improve-save-path').value.trim();
+      const code = document.getElementById('improve-code-output').value;
+      if (!path) {
+        alert('Please enter a destination file path (e.g. ./safe_controller.py)');
+        return;
+      }
+      try {
+        const resp = await fetch('/api/save-file', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ path: path, content: code })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          alert('Successfully saved improved code to: ' + data.saved_path);
+        } else {
+          alert('Error saving: ' + data.error);
+        }
+      } catch (err) {
+        alert('Save failed: ' + err);
+      }
     }
 
     // Modal

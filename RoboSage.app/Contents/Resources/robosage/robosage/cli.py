@@ -217,7 +217,43 @@ def cmd_generate(args):
             f.write(code)
         print(f"{Colors.GREEN}✅ Successfully generated safe template '{t_type}' at:{Colors.RESET} {out_path}")
     else:
-        print(code)
+def cmd_improve(args):
+    """Uses local Qwen to refactor and optimize robotics code."""
+    print_banner()
+    from robosage.llm.provider import QwenProvider
+
+    target_path = os.path.abspath(args.path)
+    if not os.path.isfile(target_path):
+        print(f"{Colors.RED}File '{target_path}' not found.{Colors.RESET}")
+        sys.exit(1)
+
+    with open(target_path, "r", encoding="utf-8") as f:
+        code = f.read()
+
+    print(f"🤖 {Colors.BOLD}Analyzing and optimizing robotics code with Qwen...{Colors.RESET}")
+    print(f"Target: {target_path}")
+    print(f"Focus:  {args.focus.upper()}\n")
+
+    qwen = QwenProvider(model=args.model, endpoint=args.endpoint)
+    try:
+        improved = qwen.improve_code(code, focus=args.focus)
+        if args.output:
+            out_p = os.path.abspath(args.output)
+            with open(out_p, "w", encoding="utf-8") as f:
+                f.write(improved)
+            print(f"{Colors.GREEN}✅ Successfully saved improved code to: {out_p}{Colors.RESET}")
+        else:
+            print(f"{Colors.CYAN}{Colors.BOLD}--- QWEN IMPROVED ROBOTICS CODE ---{Colors.RESET}\n")
+            print(improved)
+    except Exception as e:
+        print(f"{Colors.YELLOW}Notice: Could not connect to local Qwen server ({e}).{Colors.RESET}")
+        print("Tip: Start Qwen using `ollama run qwen2.5-coder` or your local model runner.\n")
+        print("Running static loophole scan instead:")
+        from robosage.diagnostics.loophole_detector import LoopholeDetector
+        d = LoopholeDetector()
+        findings = d.audit_file(target_path)
+        for f in findings:
+            print(f"  • [{f.severity.value}] {f.title}: {f.recommended_fix}")
 
 
 def cmd_check_qos(args):
@@ -300,6 +336,14 @@ def main():
     p_audit = subparsers.add_parser("audit", help="Run loophole and safety audit on ROS 2 package or code")
     p_audit.add_argument("path", nargs="?", default=".", help="Path to file or directory to audit (default: .)")
 
+    # improve (Qwen Robotics Code Optimizer)
+    p_improve = subparsers.add_parser("improve", help="Optimize & refactor robotics code using local Qwen")
+    p_improve.add_argument("path", help="Path to Python or C++ robotics file to improve")
+    p_improve.add_argument("--focus", default="all", choices=["all", "safety", "concurrency", "performance"], help="Optimization focus area")
+    p_improve.add_argument("--model", help="Qwen model name (default: auto-detected or qwen2.5-coder)")
+    p_improve.add_argument("--endpoint", help="Qwen endpoint (default: http://localhost:11434)")
+    p_improve.add_argument("--output", "-o", help="File path to save the improved code")
+
     # triage
     p_triage = subparsers.add_parser("triage", help="Triage a ROS 2 log file, crash output, or traceback")
     p_triage.add_argument("target", help="Log file path or error message text")
@@ -332,6 +376,7 @@ def main():
     dispatch = {
         "chat": cmd_chat,
         "audit": cmd_audit,
+        "improve": cmd_improve,
         "triage": cmd_triage,
         "watch": cmd_watch,
         "generate": cmd_generate,
