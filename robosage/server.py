@@ -36,7 +36,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
         super().setup()
         self.directory = str(WEB_DIR)
         if not hasattr(self.server, "agent_session"):
-            self.server.llm_provider = get_llm_provider()
+            self.server.llm_provider = get_llm_provider(provider_name="qwen")
             self.server.agent_session = AgentSession(provider=self.server.llm_provider)
             self.server.log_analyzer = ROS2LogAnalyzer()
             self.server.loophole_detector = LoopholeDetector()
@@ -109,7 +109,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     # -------------------------------------------------------------
     def _handle_chat(self, body: Dict[str, Any]):
         message = body.get("message", "").strip()
-        provider_name = body.get("provider")
+        provider_name = body.get("provider") or "qwen"
         api_key = body.get("api_key")
         model = body.get("model")
 
@@ -125,9 +125,16 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             session = self.server.agent_session
 
         reply = session.step(message)
+        model_name = getattr(session.provider, "model", None)
+        provider_label = (
+            f"Qwen Coder ({model_name})"
+            if "qwen" in session.provider.__class__.__name__.lower()
+            else session.provider.__class__.__name__
+        )
         self._send_json({
             "reply": reply,
-            "provider": session.provider.__class__.__name__,
+            "provider": provider_label,
+            "model": model_name,
             "history_length": len(session.conversation_history),
         })
 
@@ -248,10 +255,16 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
         })
 
     def _handle_local_models(self):
-        from robosage.llm.provider import get_installed_ollama_models, resolve_best_local_model
+        import threading
+        from robosage.llm.provider import get_installed_ollama_models, resolve_best_local_model, warm_up_local_model
         endpoint = os.environ.get("QWEN_ENDPOINT", "http://localhost:11434")
         installed = get_installed_ollama_models(endpoint)
         best = resolve_best_local_model(endpoint) if installed else "qwen2.5-coder:latest"
+
+        # Pre-warm Qwen Coder in background so first user prompt is instant
+        if installed:
+            threading.Thread(target=warm_up_local_model, args=(endpoint, best), daemon=True).start()
+
         self._send_json({
             "ollama_online": len(installed) > 0,
             "installed_models": installed,
@@ -297,13 +310,13 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({
                 "improved_code": improved,
                 "model": qwen.model,
-                "provider": f"Qwen ({qwen.model})",
+                "provider": f"Qwen Coder ({qwen.model})",
             })
         except Exception as e:
             # If Qwen server connection fails, provide offline improvement guidance
             fallback_prompt = (
-                f"⚠️ Could not reach local Qwen at {qwen.endpoint} ({e}).\n\n"
-                f"To start local Qwen, run: `ollama run qwen2.5-coder` or open your local model runner.\n\n"
+                f"⚠️ Could not reach local Qwen Coder at {qwen.endpoint} ({e}).\n\n"
+                f"To start local Qwen Coder, run: `ollama run qwen2.5-coder` or open your local model runner.\n\n"
                 f"**Static Robotics Safety Recommendations for your code:**\n"
                 f"1. Ensure zero-velocity Twist(0,0,0) is commanded before node shutdown.\n"
                 f"2. Wrap all `tf_buffer.lookup_transform` calls in `try...except TransformException`.\n"
@@ -394,12 +407,20 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
 
 def start_server(host: str = "127.0.0.1", port: int = 8765):
     """Starts the RoboSage application HTTP server."""
+    import threading
+    from robosage.llm.provider import warm_up_local_model
+
     server_address = (host, port)
     httpd = HTTPServer(server_address, RoboSageRequestHandler)
-    httpd.llm_provider = get_llm_provider()
+    # Default to local Qwen Coder model
+    httpd.llm_provider = get_llm_provider(provider_name="qwen")
     httpd.agent_session = AgentSession(provider=httpd.llm_provider)
     httpd.log_analyzer = ROS2LogAnalyzer()
     httpd.loophole_detector = LoopholeDetector()
+
+    # Pre-warm local Qwen Coder in background thread
+    threading.Thread(target=warm_up_local_model, daemon=True).start()
+
     print(f"🚀 RoboSage Application Server running at http://{host}:{port}/")
     try:
         httpd.serve_forever()

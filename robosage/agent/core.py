@@ -48,10 +48,24 @@ class AgentSession:
             self.conversation_history.append(ChatMessage(role="assistant", content=response.content))
             return response.content
         except Exception as e:
+            err_str = str(e)
+            is_timeout = "timed out" in err_str.lower()
+            if is_timeout:
+                note = (
+                    "> ℹ️ **RoboSage Model Warm-Up Note:** The local Qwen Coder model timed out while loading into memory.\n"
+                    "> *The model weights are now resident in unified memory (24h keep-alive enabled). Click **Send** again to get your answer immediately!*\n\n"
+                )
+            else:
+                note = (
+                    f"> ℹ️ **RoboSage Connection Note:** `{err_str}`\n"
+                    f"> *Tip: Ensure Ollama is active (`ollama serve`) with Qwen Coder installed (`ollama pull qwen2.5-coder`).*\n\n"
+                )
+
             # If LLM provider fails, return diagnostic output if available
             if pre_tool_context:
                 return (
-                    f"⚠️ Local AI connection note ({e}), but RoboSage static diagnostics succeeded:\n\n"
+                    f"{note}"
+                    f"**RoboSage Static Diagnostic Findings:**\n\n"
                     f"{pre_tool_context}"
                 )
             # Graceful fallback: RoboSage Offline Expert Intelligence
@@ -59,8 +73,7 @@ class AgentSession:
             offline = OfflineRoboticsProvider()
             offline_resp = offline.generate(user_input)
             return (
-                f"> ℹ️ **RoboSage Connection Note:** `{e}`\n"
-                f"> *Tip: Ensure Ollama is active (`ollama serve`) with Qwen installed (`ollama pull qwen2.5-coder`).*\n\n"
+                f"{note}"
                 f"**RoboSage Static Diagnostic Assistant Response:**\n\n"
                 f"{offline_resp.content}"
             )

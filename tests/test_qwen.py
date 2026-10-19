@@ -87,6 +87,51 @@ class TestQwenProvider(unittest.TestCase):
         self.assertEqual(resp.content, "Self-healed response")
         self.assertEqual(qwen.model, "qwen2.5:latest")
 
+    @patch("urllib.request.urlopen")
+    def test_qwen_coder_payload_keep_alive(self, mock_urlopen):
+        captured_payload = {}
+
+        def fake_urlopen(req, *args, **kwargs):
+            nonlocal captured_payload
+            captured_payload = json.loads(req.data.decode('utf-8'))
+            m = MagicMock()
+            m.read.return_value = b'{"message": {"content": "ok"}}'
+            return MagicMock(__enter__=lambda s: m)
+
+        mock_urlopen.side_effect = fake_urlopen
+        qwen = QwenProvider(model="qwen2.5-coder:latest")
+        qwen.generate("test prompt")
+        self.assertEqual(captured_payload.get("keep_alive"), "24h")
+        self.assertEqual(captured_payload.get("model"), "qwen2.5-coder:latest")
+
+    @patch("urllib.request.urlopen")
+    def test_timeout_error_handling(self, mock_urlopen):
+        mock_urlopen.side_effect = TimeoutError("timed out")
+        qwen = QwenProvider(model="qwen2.5-coder:7b")
+        with self.assertRaises(RuntimeError) as ctx:
+            qwen.generate("test prompt")
+        self.assertIn("Local Qwen Coder model inference timed out", str(ctx.exception))
+        self.assertIn("24h keep-alive enabled", str(ctx.exception))
+
+    @patch("urllib.request.urlopen")
+    def test_warm_up_local_model(self, mock_urlopen):
+        from robosage.llm.provider import warm_up_local_model
+        captured_req = None
+
+        def fake_urlopen(req, *args, **kwargs):
+            nonlocal captured_req
+            captured_req = req
+            m = MagicMock()
+            m.status = 200
+            return MagicMock(__enter__=lambda s: m, status=200)
+
+        mock_urlopen.side_effect = fake_urlopen
+        success = warm_up_local_model(model="qwen2.5-coder:7b")
+        self.assertTrue(success)
+        payload = json.loads(captured_req.data.decode('utf-8'))
+        self.assertEqual(payload.get("keep_alive"), "24h")
+        self.assertEqual(payload.get("prompt"), "")
+
 
 if __name__ == "__main__":
     unittest.main()
