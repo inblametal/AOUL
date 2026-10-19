@@ -27,8 +27,23 @@ from robosage.server import start_server
 
 
 def open_browser(url: str, delay_sec: float = 0.8):
-    """Opens browser after server starts."""
+    """Opens browser or native desktop window after server starts."""
     time.sleep(delay_sec)
+    if sys.platform == "win32":
+        import subprocess
+        for browser_path in [
+            os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Microsoft\Edge\Application\msedge.exe"),
+        ]:
+            if os.path.exists(browser_path):
+                try:
+                    subprocess.Popen([browser_path, f"--app={url}"])
+                    return
+                except Exception:
+                    pass
     try:
         webbrowser.open(url)
     except Exception:

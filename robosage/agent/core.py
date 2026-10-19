@@ -52,12 +52,12 @@ class AgentSession:
             is_timeout = "timed out" in err_str.lower()
             if is_timeout:
                 note = (
-                    "> ℹ️ **RoboSage Model Warm-Up Note:** The local Qwen Coder model timed out while loading into memory.\n"
+                    "> ℹ️ **AOUL Model Warm-Up Note:** The local Qwen Coder model timed out while loading into memory.\n"
                     "> *The model weights are now resident in unified memory (24h keep-alive enabled). Click **Send** again to get your answer immediately!*\n\n"
                 )
             else:
                 note = (
-                    f"> ℹ️ **RoboSage Connection Note:** `{err_str}`\n"
+                    f"> ℹ️ **AOUL Connection Note:** `{err_str}`\n"
                     f"> *Tip: Ensure Ollama is active (`ollama serve`) with Qwen Coder installed (`ollama pull qwen2.5-coder`).*\n\n"
                 )
 
@@ -65,18 +65,90 @@ class AgentSession:
             if pre_tool_context:
                 return (
                     f"{note}"
-                    f"**RoboSage Static Diagnostic Findings:**\n\n"
+                    f"**AOUL Static Diagnostic Findings:**\n\n"
                     f"{pre_tool_context}"
                 )
-            # Graceful fallback: RoboSage Offline Expert Intelligence
+            # Graceful fallback: AOUL Offline Expert Intelligence
             from robosage.llm.provider import OfflineRoboticsProvider
             offline = OfflineRoboticsProvider()
             offline_resp = offline.generate(user_input)
             return (
                 f"{note}"
-                f"**RoboSage Static Diagnostic Assistant Response:**\n\n"
+                f"**AOUL Static Diagnostic Assistant Response:**\n\n"
                 f"{offline_resp.content}"
             )
+
+    def step_stream(self, user_input: str):
+        """Processes a single conversational turn from the user, yielding streaming chunks as tokens arrive."""
+        pre_tool_context = self._evaluate_quick_tools(user_input)
+
+        augmented_prompt = user_input
+        if pre_tool_context:
+            augmented_prompt = (
+                f"{user_input}\n\n"
+                f"[AOUL Diagnostic Tool Output]:\n{pre_tool_context}\n\n"
+                f"Please synthesize this diagnostic finding, explain the physics/concurrency cause, and provide a clean solution."
+            )
+
+        full_reply = []
+        model_name = getattr(self.provider, "model", "Qwen Coder")
+        try:
+            if hasattr(self.provider, "generate_stream"):
+                for token in self.provider.generate_stream(
+                    prompt=augmented_prompt,
+                    system_prompt=self.system_prompt,
+                    history=self.conversation_history,
+                ):
+                    full_reply.append(token)
+                    yield {"type": "token", "token": token, "model": model_name}
+            else:
+                resp = self.provider.generate(
+                    prompt=augmented_prompt,
+                    system_prompt=self.system_prompt,
+                    history=self.conversation_history,
+                )
+                full_reply.append(resp.content)
+                yield {"type": "token", "token": resp.content, "model": model_name}
+
+            content = "".join(full_reply)
+            self.conversation_history.append(ChatMessage(role="user", content=user_input))
+            self.conversation_history.append(ChatMessage(role="assistant", content=content))
+            yield {"type": "done", "reply": content, "model": model_name}
+
+        except Exception as e:
+            err_str = str(e)
+            is_timeout = "timed out" in err_str.lower()
+            if is_timeout:
+                note = (
+                    "> ℹ️ **AOUL Model Warm-Up Note:** The local Qwen Coder model timed out while loading into memory.\n"
+                    "> *The model weights are now resident in unified memory (24h keep-alive enabled). Click **Send** again to get your answer immediately!*\n\n"
+                )
+            else:
+                note = (
+                    f"> ℹ️ **AOUL Connection Note:** `{err_str}`\n"
+                    f"> *Tip: Ensure Ollama is active (`ollama serve`) with Qwen Coder installed (`ollama pull qwen2.5-coder`).*\n\n"
+                )
+
+            if pre_tool_context:
+                fallback_text = (
+                    f"{note}"
+                    f"**AOUL Static Diagnostic Findings:**\n\n"
+                    f"{pre_tool_context}"
+                )
+            else:
+                from robosage.llm.provider import OfflineRoboticsProvider
+                offline = OfflineRoboticsProvider()
+                offline_resp = offline.generate(user_input)
+                fallback_text = (
+                    f"{note}"
+                    f"**AOUL Static Diagnostic Assistant Response:**\n\n"
+                    f"{offline_resp.content}"
+                )
+
+            self.conversation_history.append(ChatMessage(role="user", content=user_input))
+            self.conversation_history.append(ChatMessage(role="assistant", content=fallback_text))
+            yield {"type": "token", "token": fallback_text, "model": "Offline Heuristics"}
+            yield {"type": "done", "reply": fallback_text, "model": "Offline Heuristics"}
 
     def _evaluate_quick_tools(self, text: str) -> Optional[str]:
         """Runs relevant static analysis or triage if file paths or logs are detected in prompt."""

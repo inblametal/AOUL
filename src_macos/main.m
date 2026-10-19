@@ -45,7 +45,7 @@
                                                 backing:NSBackingStoreBuffered
                                                   defer:NO];
 
-    [self.window setTitle:@"RoboSage — AI Senior Robotics Copilot"];
+    [self.window setTitle:@"AOUL — AI Robotics Copilot (Actuator, Orientation, Undefined-behavior, Locator)"];
     [self.window setMinSize:NSMakeSize(1024, 680)];
     [self.window setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]];
     [self.window setBackgroundColor:[NSColor colorWithCalibratedRed:11.0/255.0 green:15.0/255.0 blue:25.0/255.0 alpha:1.0]];
@@ -55,7 +55,7 @@
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
     config.defaultWebpagePreferences.allowsContentJavaScript = YES;
     [config.preferences setValue:@YES forKey:@"developerExtrasEnabled"];
-    config.applicationNameForUserAgent = @"RoboSage/2.0 Native macOS App";
+    config.applicationNameForUserAgent = @"AOUL/2.0 Native macOS App";
 
     self.webView = [[WKWebView alloc] initWithFrame:self.window.contentView.bounds configuration:config];
     self.webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -76,7 +76,7 @@
     [self.loadingView addSubview:self.spinner];
 
     self.statusLabel = [[NSTextField alloc] initWithFrame:NSMakeRect((width - 500)/2.0, (height/2.0) - 45, 500, 30)];
-    self.statusLabel.stringValue = @"Starting RoboSage AI Robotics Engine & Qwen...";
+    self.statusLabel.stringValue = @"Starting AOUL Robotics Engine & Qwen...";
     self.statusLabel.alignment = NSTextAlignmentCenter;
     self.statusLabel.textColor = [NSColor colorWithCalibratedRed:56.0/255.0 green:189.0/255.0 blue:248.0/255.0 alpha:1.0];
     self.statusLabel.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
@@ -93,7 +93,7 @@
     // 5. Ensure Ollama service is active
     [self ensureOllamaRunning];
 
-    // 6. Launch or connect to local RoboSage server
+    // 6. Launch or connect to local AOUL server
     [self startServerIfNeeded];
 }
 
@@ -199,7 +199,7 @@
     NSString *projectDir = [self resolveProjectDirectory];
     NSString *runScript = [projectDir stringByAppendingPathComponent:@"run.py"];
 
-    NSString *logDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Logs/RoboSage"];
+    NSString *logDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Logs/AOUL"];
     [[NSFileManager defaultManager] createDirectoryAtPath:logDir withIntermediateDirectories:YES attributes:nil error:nil];
     NSString *logPath = [logDir stringByAppendingPathComponent:@"server.log"];
     [[NSFileManager defaultManager] createFileAtPath:logPath contents:nil attributes:nil];
@@ -295,17 +295,17 @@
 - (void)setupMenuBar {
     NSMenu *mainMenu = [[NSMenu alloc] init];
 
-    // 1. RoboSage App Menu
+    // 1. AOUL App Menu
     NSMenuItem *appMenuItem = [[NSMenuItem alloc] init];
-    NSMenu *appMenu = [[NSMenu alloc] initWithTitle:@"RoboSage"];
-    [appMenu addItemWithTitle:@"About RoboSage" action:@selector(showAbout) keyEquivalent:@""];
+    NSMenu *appMenu = [[NSMenu alloc] initWithTitle:@"AOUL"];
+    [appMenu addItemWithTitle:@"About AOUL" action:@selector(showAbout) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Hide RoboSage" action:@selector(hide:) keyEquivalent:@"h"];
+    [appMenu addItemWithTitle:@"Hide AOUL" action:@selector(hide:) keyEquivalent:@"h"];
     NSMenuItem *hideOthers = [appMenu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
     [hideOthers setKeyEquivalentModifierMask:(NSEventModifierFlagOption | NSEventModifierFlagCommand)];
     [appMenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit RoboSage" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:@"Quit AOUL" action:@selector(terminate:) keyEquivalent:@"q"];
     [appMenuItem setSubmenu:appMenu];
     [mainMenu addItem:appMenuItem];
 
@@ -365,11 +365,12 @@
 
 - (void)showAbout {
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"RoboSage AI Robotics Copilot";
+    alert.messageText = @"AOUL — AI Robotics Copilot";
     alert.informativeText = @"Version 2.0.0 (Native Desktop App)\n\n"
+                            "Actuator • Orientation • Undefined-behavior • Locator\n\n"
                             "Autonomous Robotics Assistant & Code Optimizer powered by local Qwen Coder.\n"
                             "ROS 2 Concurrency, Safety Loopholes, QoS Analysis, and Log Triage.\n\n"
-                            "© 2026 RoboSage. All Rights Reserved.";
+                            "© 2026 AOUL. All Rights Reserved.";
     alert.alertStyle = NSAlertStyleInformational;
     [alert runModal];
 }

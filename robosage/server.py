@@ -112,6 +112,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
         provider_name = body.get("provider") or "qwen"
         api_key = body.get("api_key")
         model = body.get("model")
+        stream = body.get("stream", True)
 
         if not message:
             self._send_json({"error": "Empty message."}, status=400)
@@ -123,6 +124,29 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             session = AgentSession(provider=provider)
         else:
             session = self.server.agent_session
+
+        if stream:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache, no-transform")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("X-Accel-Buffering", "no")
+            self._send_cors_headers()
+            self.end_headers()
+
+            # Immediate heartbeat so WebKit connects instantly with 0ms latency
+            try:
+                self.wfile.write(b": heartbeat\n\n")
+                self.wfile.flush()
+                for chunk in session.step_stream(message):
+                    data = json.dumps(chunk)
+                    self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                self.wfile.write(b"data: [DONE]\n\n")
+                self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return
 
         reply = session.step(message)
         model_name = getattr(session.provider, "model", None)
@@ -257,7 +281,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     def _handle_local_models(self):
         import threading
         from robosage.llm.provider import get_installed_ollama_models, resolve_best_local_model, warm_up_local_model
-        endpoint = os.environ.get("QWEN_ENDPOINT", "http://localhost:11434")
+        endpoint = os.environ.get("QWEN_ENDPOINT", "http://127.0.0.1:11434")
         installed = get_installed_ollama_models(endpoint)
         best = resolve_best_local_model(endpoint) if installed else "qwen2.5-coder:latest"
 

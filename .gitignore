@@ -1,10 +1,27 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+
+# macOS artifacts
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Application bundles (built from source via scripts/build_app.sh)
+AOUL.app/
+RoboSage.app/
+*.app/
+
+# Virtual environments
+venv/
 .venv/
+env/
+
+# Build & temporary scratch
 build/
+scratch/
 install/
 log/
+*.log
 *.egg-info/
-dist/
