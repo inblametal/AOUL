@@ -88,7 +88,7 @@ def main():
     url = f"http://{args.host}:{args.port}/"
 
     print_banner()
-    print(f"  {Colors.BOLD}{Colors.GREEN}► Starting RoboSage Desktop Web Application...{Colors.RESET}")
+    print(f"  {Colors.BOLD}{Colors.GREEN}► Starting AOUL Desktop Web Application...{Colors.RESET}")
     print(f"  {Colors.BOLD}► Dashboard URL:{Colors.RESET} {Colors.CYAN}{Colors.UNDERLINE}{url}{Colors.RESET}")
     print(f"  {Colors.BOLD}► Press {Colors.RED}Ctrl+C{Colors.RESET} to stop the server.{Colors.RESET}\n")
 
@@ -98,7 +98,7 @@ def main():
     try:
         start_server(host=args.host, port=args.port)
     except KeyboardInterrupt:
-        print(f"\n{Colors.GREEN}RoboSage application shutdown gracefully.{Colors.RESET}")
+        print(f"\n{Colors.GREEN}AOUL application shutdown gracefully.{Colors.RESET}")
 
 
 if __name__ == "__main__":

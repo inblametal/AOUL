@@ -530,33 +530,109 @@ def cmd_package(args):
         print(f"{Colors.CYAN}🔧  Building macOS dmg (requires external script)...{Colors.RESET}")
         print(f"{Colors.YELLOW}⚠️  Dmg creation not automated in sandbox. Use build_dmg.sh manually.{Colors.RESET}")
 
+
+def cmd_urdf(args):
+    """Audits a URDF robot model for physical impossibilities and simulation loopholes."""
+    print_banner()
+    from robosage.diagnostics.urdf_auditor import UrdfAuditor
+    target = args.path
+    if target in ("nominal", "arm"):
+        content = UrdfAuditor.get_sample_urdfs()["nominal_arm"]["urdf"]
+    elif target in ("faulty", "hazardous"):
+        content = UrdfAuditor.get_sample_urdfs()["faulty_inertias_amr"]["urdf"]
+    elif os.path.isfile(target):
+        with open(target, "r", encoding="utf-8") as f:
+            content = f.read()
+    else:
+        print(f"{Colors.RED}Target '{target}' not found. Use 'nominal', 'faulty', or a valid URDF file path.{Colors.RESET}")
+        sys.exit(1)
+
+    res = UrdfAuditor.audit_urdf_text(content)
+    if not res["valid"]:
+        print(f"{Colors.RED}URDF Invalid: {res['error']}{Colors.RESET}")
+        return
+
+    print(f"🤖 {Colors.BOLD}Robot Model Audited:{Colors.RESET} {res['robot_name']}")
+    stats = res["stats"]
+    print(f"Links: {stats['links']} | Joints: {stats['joints']} | Total Mass: {stats['total_mass_kg']} kg | Root Link: {stats['root_link']}\n")
+
+    if not res["findings"]:
+        print(f"{Colors.GREEN}✅ URDF Physics Clean: No negative inertias, triangle inequality violations, or missing collision tags found.{Colors.RESET}")
+    else:
+        print(f"{Colors.RED}{Colors.BOLD}Found {len(res['findings'])} URDF Physics Finding(s):{Colors.RESET}")
+        for f in res["findings"]:
+            col = Colors.RED if f["severity"] == "CRITICAL" else Colors.YELLOW
+            print(f"{col}[{f['severity']}] [{f['element_type'].upper()}: {f['element_name']}] {f['title']}{Colors.RESET}")
+            print(f"   Loophole:    {f['description']}")
+            print(f"   Hazard:      {Colors.RED}{f['physics_impact']}{Colors.RESET}")
+            print(f"   Fix:         {f['recommended_fix']}")
+            print("-" * 65)
+
+
+def cmd_power(args):
+    """Calculates motor thermal saturation, Joule losses, and battery discharge."""
+    print_banner()
+    from robosage.diagnostics.power_thermal import PowerThermalEngine
+    res = PowerThermalEngine.calculate_motor_and_power(
+        torque_nm=args.torque,
+        speed_rad_s=args.speed,
+        run_duration_min=args.duration,
+        motor_resistance_ohms=args.resistance,
+        torque_constant_kt=args.kt,
+        battery_voltage=args.voltage,
+        battery_capacity_ah=args.capacity,
+    )
+    col = Colors.GREEN if res["thermal_status"] == "NOMINAL" else Colors.YELLOW if res["thermal_status"] == "WARNING_OVERHEAT" else Colors.RED
+    print(f"⚡ {Colors.BOLD}Actuator Thermal & Battery Power Envelope:{Colors.RESET}")
+    print(f"Thermal State:       {col}{res['thermal_status']}{Colors.RESET}")
+    print(f"Transient Temp:      {col}{res['transient_temp_c']} °C{Colors.RESET} (after {args.duration} min)")
+    print(f"Steady-State Temp:   {res['steady_state_temp_c']} °C (Rated Max: {res['max_rated_temp_c']} °C)")
+    print(f"Motor Current:       {res['current_a']} A")
+    print(f"Joule Heat Loss:     {res['joule_loss_w']} W | Mech Power: {res['mech_power_w']} W")
+    print(f"Total System Power:  {res['total_system_power_w']} W")
+    print(f"Max Safe Duty Cycle: {res['safe_duty_cycle_pct']} %")
+    print(f"Battery Runtime:     {Colors.CYAN}{res['battery_runtime_hours']} hours{Colors.RESET} ({res['battery_energy_wh']} Wh capacity)\n")
+    for a in res["advisories"]:
+        print(f"  • {col}{a}{Colors.RESET}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="robosage",
-        description="RoboSage: AI Robotics Assistant, Safety Auditor \u0026 Diagnostic Copilot",
-    )
-    parser = argparse.ArgumentParser(
-        prog="robosage",
-        description="RoboSage: AI Robotics Assistant, Safety Auditor & Diagnostic Copilot",
+        description="AOUL: AI Senior Robotics Assistant, Safety Auditor & Diagnostic Copilot",
     )
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
+    # chat
+    p_chat = subparsers.add_parser("chat", help="Start interactive pair programming with AI robotics assistant")
+    p_chat.add_argument("--provider", help="LLM Provider: gemini, openai, anthropic, ollama, or auto")
+    p_chat.add_argument("--api-key", help="API key for cloud provider")
+    p_chat.add_argument("--model", help="Model name (e.g. gemini-1.5-flash, gpt-4o, llama3)")
+
     # wizard (developer experience)
     p_wizard = subparsers.add_parser("wizard", help="Interactive setup wizard for AOUL configuration")
-    p_wizard.set_defaults(func=cmd_wizard)
 
     # ci (integration)
     p_ci = subparsers.add_parser("ci", help="Generate CI workflow for AOUL diagnostics")
-    p_ci.set_defaults(func=cmd_ci)
 
     # package (packaging)
     p_pkg = subparsers.add_parser("package", help="Build distributable packages (wheel, sdist, optional exe/dmg)")
     p_pkg.add_argument("--exe", action="store_true", help="Also build Windows exe using PyInstaller")
     p_pkg.add_argument("--dmg", action="store_true", help="Create macOS dmg (requires external script)")
-    p_pkg.set_defaults(func=cmd_package)
-    p_chat.add_argument("--provider", help="LLM Provider: gemini, openai, anthropic, ollama, or auto")
-    p_chat.add_argument("--api-key", help="API key for cloud provider")
-    p_chat.add_argument("--model", help="Model name (e.g. gemini-1.5-flash, gpt-4o, llama3)")
+
+    # urdf (Physics & Inertia Auditor)
+    p_urdf = subparsers.add_parser("urdf", help="Audit URDF robot model for physics loopholes & invalid inertias")
+    p_urdf.add_argument("path", nargs="?", default="nominal", help="Path to URDF file or preset: 'nominal', 'faulty'")
+
+    # power (Motor Thermal & Battery Envelope)
+    p_power = subparsers.add_parser("power", help="Simulate motor Joule heating and battery discharge runtime")
+    p_power.add_argument("--torque", type=float, default=2.5, help="Actuator torque (Nm)")
+    p_power.add_argument("--speed", type=float, default=10.0, help="Actuator speed (rad/s)")
+    p_power.add_argument("--duration", type=float, default=15.0, help="Run duration (minutes)")
+    p_power.add_argument("--resistance", type=float, default=0.85, help="Winding resistance (Ohms)")
+    p_power.add_argument("--kt", type=float, default=0.12, help="Torque constant Kt (Nm/A)")
+    p_power.add_argument("--voltage", type=float, default=24.0, help="Battery voltage (V)")
+    p_power.add_argument("--capacity", type=float, default=15.0, help="Battery capacity (Ah)")
 
     # audit
     p_audit = subparsers.add_parser("audit", help="Run loophole and safety audit on ROS 2 package or code")
@@ -630,6 +706,11 @@ def main():
         "bag": cmd_bag,
         "bt": cmd_bt,
         "shield": cmd_shield,
+        "urdf": cmd_urdf,
+        "power": cmd_power,
+        "wizard": cmd_wizard,
+        "ci": cmd_ci,
+        "package": cmd_package,
     }
 
     handler = dispatch.get(args.command)

@@ -304,6 +304,18 @@
           <i data-lucide="git-branch" class="w-4 h-4 text-amber-400"></i>
           <span>Behavior Trees</span>
         </button>
+        <button onclick="switchTab('urdf')" id="nav-urdf" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+          <span>URDF Physics Auditor</span>
+        </button>
+        <button onclick="switchTab('graph')" id="nav-graph" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="network" class="w-4 h-4 text-sky-400"></i>
+          <span>Node Graph & QoS</span>
+        </button>
+        <button onclick="switchTab('power')" id="nav-power" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i>
+          <span>Actuator & Battery</span>
+        </button>
       </nav>
     </div>
 
@@ -789,6 +801,10 @@
               <i data-lucide="compass" class="w-3.5 h-3.5"></i>
               <span>Reset View</span>
             </button>
+            <button onclick="toggleUrdfImportModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-purple-300 border border-purple-500/30 transition flex items-center gap-1.5" title="Import and articulately render custom robot URDF in 3D">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Import URDF</span>
+            </button>
             <button onclick="toggleTwinAnimation()" id="twin-demo-btn" class="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition">
               <i data-lucide="play" class="w-3.5 h-3.5"></i>
               <span>Demo Trajectory</span>
@@ -1109,6 +1125,205 @@
         </div>
       </section>
 
+      <!-- ========================================== -->
+      <!-- TAB 11: URDF PHYSICS & INERTIA AUDITOR -->
+      <!-- ========================================== -->
+      <section id="tab-urdf" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i>
+              URDF & Robot Physics Integrity Auditor
+            </h3>
+            <p class="text-xs text-slate-400">Audits negative moments of inertia, triangle inequality violations, missing collision geometries, and invalid joint limits.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="urdf-preset-select" onchange="loadSampleUrdf(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-purple-300 rounded-lg px-3 py-1.5 outline-none font-mono">
+              <option value="nominal">Nominal 3-DOF Arm (Valid Inertias)</option>
+              <option value="faulty">Hazardous AMR (Negative Inertias & Inverted Limits)</option>
+            </select>
+            <button onclick="runUrdfAudit()" id="urdf-run-btn" class="px-4 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Audit URDF Physics</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[480px]">
+          <!-- URDF Editor -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-mono">robot_description.urdf</span>
+              <span class="text-[11px] text-slate-500">ROS / Gazebo / MoveIt Specification</span>
+            </div>
+            <textarea id="urdf-xml-input" class="w-full flex-1 p-4 bg-transparent font-mono text-xs text-slate-200 outline-none resize-none custom-scroll" placeholder="<robot name='my_robot'>..."></textarea>
+          </div>
+
+          <!-- Findings & Stats -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-medium flex items-center gap-2">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-purple-400"></i>
+                Physical & Simulation Findings
+              </span>
+              <span id="urdf-stats-badge" class="font-mono text-xs text-slate-400">0 findings</span>
+            </div>
+            <div id="urdf-audit-output" class="flex-1 p-4 overflow-y-auto custom-scroll space-y-3 text-xs text-slate-300">
+              <div class="text-center py-16 text-slate-500">
+                <i data-lucide="layers" class="w-10 h-10 mx-auto mb-2 stroke-1 opacity-50"></i>
+                <p>Click "Audit URDF Physics" to inspect mass, inertias, and kinematic trees.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 12: ROS 2 COMPUTATION GRAPH & QOS HEATMAP -->
+      <!-- ========================================== -->
+      <section id="tab-graph" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="network" class="w-5 h-5 text-sky-400"></i>
+              ROS 2 Node & Topic Computation Graph
+            </h3>
+            <p class="text-xs text-slate-400">Interactive computation topology with real-time DDS Quality of Service (QoS) RxO mismatch heatmap.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="loadGraphTopology()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-sky-300 border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Refresh Topology</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[500px]">
+          <!-- Interactive Visual Canvas Viewport -->
+          <div class="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden relative shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 z-10">
+              <span class="font-mono flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                RMW Network Topology (Node-Topic Graph)
+              </span>
+              <div class="flex items-center gap-3 text-[11px]">
+                <span class="text-emerald-400 font-mono">● Compatible Link</span>
+                <span class="text-red-400 font-mono">● QoS Incompatible</span>
+              </div>
+            </div>
+            <div id="graph-viewport" class="flex-1 w-full h-full min-h-[440px] bg-slate-950 relative flex items-center justify-center overflow-auto p-4">
+              <!-- SVG / Interactive Graph rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Node & Topic Detail Inspector -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-y-auto custom-scroll space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+              <i data-lucide="info" class="w-3.5 h-3.5"></i>
+              Inspector: <span id="graph-inspect-title">Click a node or topic</span>
+            </h4>
+            <div id="graph-inspect-body" class="space-y-3 text-xs text-slate-300">
+              <p class="text-slate-500 text-xs">Select any node or topic in the graph to view active publishers, subscribers, and QoS reliability / durability policies.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 13: ACTUATOR THERMAL & BATTERY POWER ENVELOPE -->
+      <!-- ========================================== -->
+      <section id="tab-power" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="zap" class="w-5 h-5 text-yellow-400"></i>
+              Actuator Thermal & Battery Power Envelope Simulator
+            </h3>
+            <p class="text-xs text-slate-400">Simulates motor Joule heating ($I^2 R$), winding thermal saturation, safe continuous duty cycles, and battery discharge.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="power-preset-select" onchange="loadPowerPreset(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-yellow-300 rounded-lg px-3 py-1.5 outline-none font-mono">
+              <option value="direct_drive_amr">Direct-Drive AMR Wheel Motor (24V 15Ah)</option>
+              <option value="high_torque_manipulator">High-Torque Manipulator Actuator (48V 20Ah)</option>
+              <option value="drone_bldc_motor">High-Speed Drone BLDC Motor (14.8V 5Ah)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[480px]">
+          <!-- Input Parameters -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Operating Load & Battery Configuration</h4>
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Continuous Torque ($\tau$):</span>
+                  <span id="pwr-torque-val" class="text-yellow-400 font-bold">3.20 Nm</span>
+                </div>
+                <input type="range" id="pwr-torque" min="0.1" max="25.0" step="0.1" value="3.20" oninput="runPowerCalculation()" class="w-full accent-yellow-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Motor Speed ($\omega$):</span>
+                  <span id="pwr-speed-val" class="text-cyan-400 font-bold">12.5 rad/s (119 RPM)</span>
+                </div>
+                <input type="range" id="pwr-speed" min="1.0" max="100.0" step="0.5" value="12.5" oninput="runPowerCalculation()" class="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Mission Run Duration:</span>
+                  <span id="pwr-dur-val" class="text-slate-300 font-bold">15 minutes</span>
+                </div>
+                <input type="range" id="pwr-dur" min="1" max="60" step="1" value="15" oninput="runPowerCalculation()" class="w-full accent-slate-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Battery Capacity:</span>
+                  <span id="pwr-bat-val" class="text-emerald-400 font-bold">24V, 15 Ah (306 Wh usable)</span>
+                </div>
+                <input type="range" id="pwr-bat" min="5" max="50" step="1" value="15" oninput="runPowerCalculation()" class="w-full accent-emerald-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+            </div>
+          </div>
+
+          <!-- Output Metrics -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Thermal Envelope & Battery Life</h4>
+            <div id="pwr-status-banner" class="p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 space-y-2">
+              <div class="flex items-center justify-between">
+                <span id="pwr-status-title" class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <i data-lucide="check-circle" class="w-4 h-4"></i>
+                  NOMINAL (Within Thermal Bounds)
+                </span>
+                <span id="pwr-status-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">SAFE</span>
+              </div>
+              <p id="pwr-advisories" class="text-xs text-slate-200 leading-relaxed font-mono">
+                Actuator within nominal thermal envelope.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Winding Temp (Transient)</span>
+                <span id="pwr-temp-trans" class="text-base font-bold text-yellow-400">42.5 °C</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Steady-State Saturation</span>
+                <span id="pwr-temp-ss" class="text-base font-bold text-slate-300">54.0 °C</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Safe Continuous Duty</span>
+                <span id="pwr-duty" class="text-base font-bold text-emerald-400">100 %</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Mission Battery Life</span>
+                <span id="pwr-runtime" class="text-base font-bold text-cyan-400">4.2 hours</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -1144,6 +1359,32 @@
       <div class="mt-6 flex justify-end gap-2">
         <button onclick="toggleSettingsModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:bg-slate-700">Cancel</button>
         <button onclick="saveApiKeys()" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- URDF 3D Import Modal -->
+  <div id="urdf-import-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-2xl p-6 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+          Import & Articulate Custom URDF in 3D
+        </h3>
+        <button onclick="toggleUrdfImportModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-3">Paste your robot URDF XML below. AOUL will parse links and joints and dynamically articulate the robot in the 3D Digital Twin.</p>
+      
+      <textarea id="urdf-paste-input" class="w-full flex-1 min-h-[220px] bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono outline-none resize-none custom-scroll" placeholder="<robot name='my_robot'>..."></textarea>
+
+      <div class="mt-4 flex justify-between items-center">
+        <button onclick="loadSampleUrdfIntoModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-purple-300 hover:bg-slate-700 border border-slate-700">Load Example URDF</button>
+        <div class="flex gap-2">
+          <button onclick="toggleUrdfImportModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 hover:bg-slate-700">Cancel</button>
+          <button onclick="applyUrdfToTwin()" class="px-4 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-white font-semibold text-xs">Render in 3D</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1184,7 +1425,10 @@
         twin: '<i data-lucide="box" class="w-4 h-4 text-cyan-400"></i> 3D WebGL Digital Twin & Kinematics Studio',
         shield: '<i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Safety Shield Deterministic Runtime Middleware',
         bag: '<i data-lucide="disc" class="w-4 h-4 text-indigo-400"></i> Rosbag2 & MCAP Flight Telemetry Inspector',
-        bt: '<i data-lucide="git-branch" class="w-4 h-4 text-amber-400"></i> Nav2 BehaviorTree.CPP v4 Visualizer & Auditor'
+        bt: '<i data-lucide="git-branch" class="w-4 h-4 text-amber-400"></i> Nav2 BehaviorTree.CPP v4 Visualizer & Auditor',
+        urdf: '<i data-lucide="layers" class="w-4 h-4 text-purple-400"></i> URDF & Robot Physics Integrity Auditor',
+        graph: '<i data-lucide="network" class="w-4 h-4 text-sky-400"></i> ROS 2 Node & Topic Computation Graph',
+        power: '<i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i> Actuator Thermal & Battery Power Envelope Simulator'
       };
       document.getElementById('view-title').innerHTML = titles[tabId] || 'AOUL';
       lucide.createIcons();
@@ -1196,6 +1440,9 @@
       if (tabId === 'shield') runSafetyShieldCalc();
       if (tabId === 'bag') loadSampleFlightBag(document.getElementById('bag-preset-select').value);
       if (tabId === 'bt') loadSampleBehaviorTree(document.getElementById('bt-preset-select').value);
+      if (tabId === 'urdf') loadSampleUrdf(document.getElementById('urdf-preset-select').value);
+      if (tabId === 'graph') loadGraphTopology();
+      if (tabId === 'power') loadPowerPreset(document.getElementById('power-preset-select').value);
     }
 
     // ==========================================
@@ -2581,6 +2828,451 @@
         lucide.createIcons();
       } catch (e) {
         out.innerHTML = `<div class="text-red-400 text-xs p-4">Audit Failed: ${e}</div>`;
+      }
+    }
+
+    // ==========================================
+    // URDF 3D LIVE IMPORT & ARTICULATION
+    // ==========================================
+    function toggleUrdfImportModal() {
+      const modal = document.getElementById('urdf-import-modal');
+      if (modal) modal.classList.toggle('hidden');
+    }
+
+    function loadSampleUrdfIntoModal() {
+      if (cachedUrdfs && cachedUrdfs['nominal_arm']) {
+        document.getElementById('urdf-paste-input').value = cachedUrdfs['nominal_arm'].urdf;
+      } else {
+        document.getElementById('urdf-paste-input').value = `<robot name="sample_3dof">
+  <link name="base_link">
+    <visual><geometry><cylinder radius="0.25" length="0.15"/></geometry></visual>
+  </link>
+  <link name="link1">
+    <visual><geometry><cylinder radius="0.1" length="0.6"/></geometry><origin xyz="0 0 0.3"/></visual>
+  </link>
+  <joint name="joint1" type="revolute">
+    <parent link="base_link"/><child link="link1"/><origin xyz="0 0 0.15"/>
+    <axis xyz="0 0 1"/><limit lower="-3.14" upper="3.14"/>
+  </joint>
+</robot>`;
+      }
+    }
+
+    function applyUrdfToTwin() {
+      const xml = document.getElementById('urdf-paste-input').value.trim();
+      if (!xml) return;
+      toggleUrdfImportModal();
+      switchTab('twin');
+
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xml, "application/xml");
+        const robotElem = doc.querySelector("robot");
+        if (!robotElem) {
+          alert("Invalid URDF: No <robot> root element found.");
+          return;
+        }
+
+        if (window.__customUrdfGroup) {
+          twinScene.remove(window.__customUrdfGroup);
+        }
+
+        const customGroup = new THREE.Group();
+        const links = doc.querySelectorAll("robot > link");
+        const joints = doc.querySelectorAll("robot > joint");
+
+        const linkMeshes = {};
+        const mat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.3, metalness: 0.7 });
+
+        links.forEach((l) => {
+          const lName = l.getAttribute("name");
+          const lGroup = new THREE.Group();
+          const vis = l.querySelector("visual");
+          if (vis) {
+            const geo = vis.querySelector("geometry");
+            let mesh = null;
+            if (geo) {
+              const box = geo.querySelector("box");
+              const cyl = geo.querySelector("cylinder");
+              const sph = geo.querySelector("sphere");
+              if (box) {
+                const sz = (box.getAttribute("size") || "0.2 0.2 0.2").split(" ").map(Number);
+                mesh = new THREE.Mesh(new THREE.BoxGeometry(sz[0] || 0.2, sz[2] || 0.2, sz[1] || 0.2), mat);
+              } else if (cyl) {
+                const r = Number(cyl.getAttribute("radius")) || 0.1;
+                const len = Number(cyl.getAttribute("length")) || 0.4;
+                mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 24), mat);
+              } else if (sph) {
+                const r = Number(sph.getAttribute("radius")) || 0.15;
+                mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 20), mat);
+              }
+            }
+            if (!mesh) {
+              mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.4, 16), mat);
+            }
+            mesh.position.y = 0.2;
+            lGroup.add(mesh);
+          }
+          linkMeshes[lName] = lGroup;
+        });
+
+        joints.forEach(j => {
+          const p = j.querySelector("parent")?.getAttribute("link");
+          const c = j.querySelector("child")?.getAttribute("link");
+          if (linkMeshes[p] && linkMeshes[c]) {
+            linkMeshes[p].add(linkMeshes[c]);
+          }
+        });
+
+        const roots = Object.keys(linkMeshes);
+        if (roots.length > 0 && linkMeshes[roots[0]]) {
+          customGroup.add(linkMeshes[roots[0]]);
+        }
+
+        window.__customUrdfGroup = customGroup;
+        if (armGroup) armGroup.visible = false;
+        if (amrGroup) amrGroup.visible = false;
+        twinScene.add(customGroup);
+
+        alert(`✨ Successfully loaded URDF '${robotElem.getAttribute("name")}' with ${links.length} links and ${joints.length} joints into 3D Digital Twin!`);
+      } catch (e) {
+        alert("Failed to parse and build URDF: " + e);
+      }
+    }
+
+    // ==========================================
+    // URDF PHYSICS AUDITOR MODULE
+    // ==========================================
+    let cachedUrdfs = null;
+
+    async function loadSampleUrdf(preset) {
+      try {
+        if (!cachedUrdfs) {
+          const resp = await fetch('/api/sample-data');
+          const data = await resp.json();
+          cachedUrdfs = data.urdf_models;
+        }
+        const key = preset === 'nominal' ? 'nominal_arm' : 'faulty_inertias_amr';
+        if (cachedUrdfs && cachedUrdfs[key]) {
+          document.getElementById('urdf-xml-input').value = cachedUrdfs[key].urdf;
+          runUrdfAudit();
+        }
+      } catch (e) {
+        console.error('Failed to load sample URDF:', e);
+      }
+    }
+
+    async function runUrdfAudit() {
+      const xml = document.getElementById('urdf-xml-input').value.trim();
+      if (!xml) {
+        alert('Please paste URDF XML to audit.');
+        return;
+      }
+      const out = document.getElementById('urdf-audit-output');
+      out.innerHTML = '<div class="text-center py-8 text-slate-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>Auditing mass tensors, inertias, and kinematic constraints...</div>';
+      lucide.createIcons();
+
+      try {
+        const resp = await fetch('/api/urdf-audit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ urdf: xml })
+        });
+        const res = await resp.json();
+
+        document.getElementById('urdf-stats-badge').innerText = `${res.total_findings} finding(s) • ${res.stats.links} links • ${res.stats.total_mass_kg} kg`;
+
+        let html = '';
+        if (res.findings && res.findings.length > 0) {
+          html += '<div class="space-y-2.5">';
+          res.findings.forEach(f => {
+            const sevCol = f.severity === 'CRITICAL' ? 'border-red-500/50 bg-red-500/10 text-red-300' :
+                           f.severity === 'HIGH' ? 'border-amber-500/50 bg-amber-500/10 text-amber-300' :
+                           'border-purple-500/40 bg-purple-500/10 text-purple-300';
+            const badgeCol = f.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                             f.severity === 'HIGH' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                             'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+            html += `
+              <div class="p-3.5 rounded-xl border ${sevCol} text-xs space-y-1.5 shadow-sm">
+                <div class="flex items-center justify-between font-bold">
+                  <span class="text-white">${escapeHtml(f.title)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold ${badgeCol}">${f.severity}</span>
+                </div>
+                <p class="text-slate-300">${escapeHtml(f.description)}</p>
+                <p class="text-red-300/90 text-[11px]"><strong class="text-red-400">Physics Hazard:</strong> ${escapeHtml(f.physics_impact)}</p>
+                <p class="text-cyan-300 text-[11px] font-semibold"><strong class="text-cyan-400">Remediation:</strong> ${escapeHtml(f.recommended_fix)}</p>
+              </div>
+            `;
+          });
+          html += '</div>';
+        } else {
+          html = `
+            <div class="text-center py-12 text-emerald-400">
+              <i data-lucide="check-circle" class="w-10 h-10 mx-auto mb-2"></i>
+              <p class="font-bold">URDF Physics Validated!</p>
+              <p class="text-slate-400 text-xs">All diagonal inertias are positive, triangle inequalities hold, and joint limits are sound.</p>
+            </div>
+          `;
+        }
+        out.innerHTML = html;
+        lucide.createIcons();
+      } catch (e) {
+        out.innerHTML = `<div class="text-red-400 text-xs p-4">URDF Audit Failed: ${e}</div>`;
+      }
+    }
+
+    // ==========================================
+    // COMPUTATION GRAPH & QOS HEATMAP
+    // ==========================================
+    let currentTopology = null;
+
+    async function loadGraphTopology() {
+      const container = document.getElementById('graph-viewport');
+      container.innerHTML = '<div class="text-slate-400 text-xs p-8 text-center"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>Querying active RMW nodes and topics...</div>';
+      lucide.createIcons();
+
+      try {
+        const resp = await fetch('/api/graph-topology');
+        currentTopology = await resp.json();
+        renderSvgGraph(currentTopology);
+      } catch (e) {
+        container.innerHTML = `<div class="text-red-400 text-xs p-4">Failed to load graph: ${e}</div>`;
+      }
+    }
+
+    function renderSvgGraph(topo) {
+      const container = document.getElementById('graph-viewport');
+      const nodes = topo.nodes || [];
+      const topics = topo.topics || [];
+      const edges = topo.edges || [];
+
+      let svg = `
+        <svg class="w-full h-full min-h-[440px]" viewBox="0 0 950 380" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#10b981" />
+            </marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#f43f5e" />
+            </marker>
+          </defs>
+      `;
+
+      edges.forEach(e => {
+        const isHazard = e.status === 'INCOMPATIBLE';
+        const strokeColor = isHazard ? '#f43f5e' : '#10b981';
+        const marker = isHazard ? 'url(#arrow-red)' : 'url(#arrow-green)';
+        const strokeDash = isHazard ? 'stroke-dasharray="4,4"' : '';
+
+        let x1 = 120, y1 = 100, x2 = 300, y2 = 100;
+        const nFrom = nodes.find(n => n.id === e.from);
+        const tFrom = topics.find(t => t.id === e.from);
+        const nTo = nodes.find(n => n.id === e.to);
+        const tTo = topics.find(t => t.id === e.to);
+
+        if (nFrom) { x1 = nFrom.x + 80; y1 = nFrom.y + 20; }
+        else if (tFrom) { x1 = 200; y1 = 100; }
+
+        if (nTo) { x2 = nTo.x; y2 = nTo.y + 20; }
+        else if (tTo) { x2 = 200; y2 = 100; }
+
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${strokeColor}" stroke-width="${isHazard ? '2.5' : '1.8'}" ${strokeDash} marker-end="${marker}" class="${isHazard ? 'animate-pulse' : ''}" />`;
+      });
+
+      const topicPos = {
+        "t_scan": {x: 200, y: 80},
+        "t_pose": {x: 420, y: 80},
+        "t_cmd_raw": {x: 650, y: 140},
+        "t_cmd_safe": {x: 650, y: 280},
+        "t_odom": {x: 520, y: 340}
+      };
+
+      topics.forEach(t => {
+        const pos = topicPos[t.id] || {x: 400, y: 200};
+        svg += `
+          <g onclick="inspectGraphTopic('${t.id}')" class="cursor-pointer hover:opacity-80">
+            <rect x="${pos.x - 55}" y="${pos.y - 14}" width="110" height="28" rx="14" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" />
+            <text x="${pos.x}" y="${pos.y + 4}" fill="#38bdf8" font-size="11" font-family="monospace" text-anchor="middle" font-weight="bold">${t.name}</text>
+          </g>
+        `;
+      });
+
+      nodes.forEach(n => {
+        const isSafety = n.type === 'safety';
+        const borderColor = isSafety ? '#10b981' : '#334155';
+        const bgColor = isSafety ? '#064e3b' : '#1e293b';
+
+        svg += `
+          <g onclick="inspectGraphNode('${n.id}')" class="cursor-pointer hover:opacity-90">
+            <rect x="${n.x}" y="${n.y}" width="150" height="42" rx="8" fill="${bgColor}" stroke="${borderColor}" stroke-width="1.5" />
+            <text x="${n.x + 12}" y="${n.y + 18}" fill="#94a3b8" font-size="9" font-family="sans-serif" font-weight="bold" text-transform="uppercase">${n.type}</text>
+            <text x="${n.x + 12}" y="${n.y + 32}" fill="#ffffff" font-size="11" font-family="monospace" font-weight="bold">${n.label}</text>
+          </g>
+        `;
+      });
+
+      svg += `
+        <g transform="translate(180, 180)">
+          <rect x="0" y="0" width="180" height="28" rx="6" fill="#450a0a" stroke="#f43f5e" stroke-width="1.2" class="animate-pulse" />
+          <text x="10" y="18" fill="#fca5a5" font-size="10" font-family="sans-serif" font-weight="bold">⚠️ Incompatible QoS RxO</text>
+        </g>
+      `;
+
+      svg += '</svg>';
+      container.innerHTML = svg;
+    }
+
+    function inspectGraphNode(nodeId) {
+      if (!currentTopology) return;
+      const n = currentTopology.nodes.find(x => x.id === nodeId);
+      if (!n) return;
+
+      document.getElementById('graph-inspect-title').innerText = n.label;
+      const published = currentTopology.edges.filter(e => e.from === nodeId);
+      const subscribed = currentTopology.edges.filter(e => e.to === nodeId);
+
+      let html = `
+        <div class="space-y-3 font-mono text-xs">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] block uppercase">Node Type</span>
+            <span class="text-cyan-300 font-bold">${n.type.toUpperCase()}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 font-sans font-bold text-xs block mb-1">Publications:</span>
+            ${published.length ? published.map(p => `
+              <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] mb-1">
+                <span class="text-emerald-400">➜ ${p.to}</span>
+                <span class="text-slate-500 block text-[10px]">${p.qos}</span>
+              </div>
+            `).join('') : '<span class="text-slate-500 text-[11px]">None</span>'}
+          </div>
+
+          <div>
+            <span class="text-slate-400 font-sans font-bold text-xs block mb-1">Subscriptions:</span>
+            ${subscribed.length ? subscribed.map(s => `
+              <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[11px] mb-1">
+                <span class="text-cyan-400">⬅ ${s.from}</span>
+                <span class="text-slate-500 block text-[10px]">${s.qos}</span>
+                ${s.status === 'INCOMPATIBLE' ? `<span class="text-red-400 block text-[10px] font-sans font-bold mt-0.5">⚠️ ${s.issue}</span>` : ''}
+              </div>
+            `).join('') : '<span class="text-slate-500 text-[11px]">None</span>'}
+          </div>
+        </div>
+      `;
+      document.getElementById('graph-inspect-body').innerHTML = html;
+    }
+
+    function inspectGraphTopic(topicId) {
+      if (!currentTopology) return;
+      const t = currentTopology.topics.find(x => x.id === topicId);
+      if (!t) return;
+
+      document.getElementById('graph-inspect-title').innerText = t.name;
+      const pubs = currentTopology.edges.filter(e => e.to === topicId);
+      const subs = currentTopology.edges.filter(e => e.from === topicId);
+
+      let html = `
+        <div class="space-y-3 font-mono text-xs">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] block uppercase">Message Type</span>
+            <span class="text-cyan-300 font-bold">${t.type}</span>
+          </div>
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] block uppercase">Publishers</span>
+            <span class="text-emerald-400 font-bold">${pubs.length} active node(s)</span>
+          </div>
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <span class="text-slate-500 text-[10px] block uppercase">Subscribers</span>
+            <span class="text-cyan-400 font-bold">${subs.length} active node(s)</span>
+          </div>
+        </div>
+      `;
+      document.getElementById('graph-inspect-body').innerHTML = html;
+    }
+
+    // ==========================================
+    // MOTOR THERMAL & BATTERY POWER SIMULATOR
+    // ==========================================
+    let cachedMotorPresets = null;
+
+    async function loadPowerPreset(presetKey) {
+      try {
+        if (!cachedMotorPresets) {
+          const resp = await fetch('/api/sample-data');
+          const data = await resp.json();
+          cachedMotorPresets = data.motor_presets;
+        }
+        const p = cachedMotorPresets ? cachedMotorPresets[presetKey] : null;
+        if (p) {
+          document.getElementById('pwr-torque').value = p.torque_nm;
+          document.getElementById('pwr-speed').value = p.speed_rad_s;
+          document.getElementById('pwr-bat').value = p.battery_capacity_ah;
+        }
+        runPowerCalculation();
+      } catch (e) {
+        console.error('Failed to load power presets:', e);
+      }
+    }
+
+    async function runPowerCalculation() {
+      const torque = parseFloat(document.getElementById('pwr-torque').value) || 2.5;
+      const speed = parseFloat(document.getElementById('pwr-speed').value) || 10.0;
+      const dur = parseFloat(document.getElementById('pwr-dur').value) || 15.0;
+      const cap = parseFloat(document.getElementById('pwr-bat').value) || 15.0;
+
+      const rpm = (speed * 9.5493).toFixed(0);
+      document.getElementById('pwr-torque-val').innerText = `${torque.toFixed(2)} Nm`;
+      document.getElementById('pwr-speed-val').innerText = `${speed.toFixed(1)} rad/s (${rpm} RPM)`;
+      document.getElementById('pwr-dur-val').innerText = `${dur.toFixed(0)} minutes`;
+      document.getElementById('pwr-bat-val').innerText = `24V, ${cap.toFixed(0)} Ah (${(24 * cap * 0.85).toFixed(0)} Wh usable)`;
+
+      try {
+        const resp = await fetch('/api/power-calc', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            torque_nm: torque,
+            speed_rad_s: speed,
+            duration_min: dur,
+            battery_capacity_ah: cap,
+            battery_voltage: 24.0
+          })
+        });
+        const res = await resp.json();
+
+        document.getElementById('pwr-temp-trans').innerText = `${res.transient_temp_c} °C`;
+        document.getElementById('pwr-temp-ss').innerText = `${res.steady_state_temp_c} °C`;
+        document.getElementById('pwr-duty').innerText = `${res.safe_duty_cycle_pct} %`;
+        document.getElementById('pwr-runtime').innerText = `${res.battery_runtime_hours} hours`;
+        document.getElementById('pwr-advisories').innerText = res.advisories.join(' ');
+
+        const banner = document.getElementById('pwr-status-banner');
+        const title = document.getElementById('pwr-status-title');
+        const badge = document.getElementById('pwr-status-badge');
+
+        if (res.thermal_status === 'CRITICAL_BURN') {
+          banner.className = 'p-4 rounded-xl border border-red-500/50 bg-red-500/10 space-y-2';
+          title.className = 'text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5';
+          title.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i> CRITICAL: THERMAL RUNAWAY HAZARD';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/30';
+          badge.innerText = 'OVERHEAT';
+        } else if (res.thermal_status === 'WARNING_OVERHEAT') {
+          banner.className = 'p-4 rounded-xl border border-amber-500/50 bg-amber-500/10 space-y-2';
+          title.className = 'text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5';
+          title.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i> WARNING: ELEVATED TEMPERATURE';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          badge.innerText = 'HOT';
+        } else {
+          banner.className = 'p-4 rounded-xl border border-emerald-500/50 bg-emerald-500/10 space-y-2';
+          title.className = 'text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5';
+          title.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> NOMINAL (Within Thermal Bounds)';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          badge.innerText = 'SAFE';
+        }
+        lucide.createIcons();
+      } catch (e) {
+        console.error('Power calc error:', e);
       }
     }
 

@@ -17,6 +17,7 @@ from robosage.diagnostics.bag_inspector import RosbagInspector
 from robosage.diagnostics.behavior_tree_analyzer import BehaviorTreeAnalyzer
 from robosage.diagnostics.log_analyzer import ROS2LogAnalyzer
 from robosage.diagnostics.loophole_detector import LoopholeDetector
+from robosage.diagnostics.power_thermal import PowerThermalEngine
 from robosage.diagnostics.qos_checker import (
     DurabilityPolicy,
     QoSProfile,
@@ -25,6 +26,7 @@ from robosage.diagnostics.qos_checker import (
 )
 from robosage.diagnostics.safety_shield import SafetyShieldEngine
 from robosage.diagnostics.sarif_exporter import SarifExporter
+from robosage.diagnostics.urdf_auditor import UrdfAuditor
 from robosage.diagnostics.workspace_inspector import WorkspaceInspector
 from robosage.llm.provider import get_llm_provider
 from robosage.templates.generator import TemplateGenerator
@@ -76,6 +78,10 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_sample_data()
             return
 
+        if path == "/api/graph-topology":
+            self._handle_graph_topology()
+            return
+
         if path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
@@ -120,6 +126,10 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_export_sarif(body)
         elif path == "/api/batch-analyze":
             self._handle_batch_analyze(body)
+        elif path == "/api/urdf-audit":
+            self._handle_urdf_audit(body)
+        elif path == "/api/power-calc":
+            self._handle_power_calc(body)
         else:
             self._send_json({"error": f"Endpoint '{path}' not found."}, status=404)
 
@@ -413,6 +423,36 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
         self._send_json({
             "flight_bags": RosbagInspector.get_sample_flight_bags(),
             "behavior_trees": BehaviorTreeAnalyzer.get_sample_trees(),
+            "urdf_models": UrdfAuditor.get_sample_urdfs(),
+            "motor_presets": {
+                "direct_drive_amr": {
+                    "torque_nm": 3.2,
+                    "speed_rad_s": 12.5,
+                    "motor_resistance_ohms": 0.85,
+                    "torque_constant_kt": 0.12,
+                    "battery_voltage": 24.0,
+                    "battery_capacity_ah": 15.0,
+                    "ambient_temp_c": 25.0
+                },
+                "high_torque_manipulator": {
+                    "torque_nm": 18.5,
+                    "speed_rad_s": 2.8,
+                    "motor_resistance_ohms": 1.45,
+                    "torque_constant_kt": 0.28,
+                    "battery_voltage": 48.0,
+                    "battery_capacity_ah": 20.0,
+                    "ambient_temp_c": 28.0
+                },
+                "drone_bldc_motor": {
+                    "torque_nm": 0.45,
+                    "speed_rad_s": 85.0,
+                    "motor_resistance_ohms": 0.18,
+                    "torque_constant_kt": 0.035,
+                    "battery_voltage": 14.8,
+                    "battery_capacity_ah": 5.0,
+                    "ambient_temp_c": 22.0
+                }
+            },
             "safety_shield_presets": {
                 "amr_warehouse": {
                     "max_linear_vel": 1.2,
@@ -437,6 +477,73 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
                 }
             }
         })
+
+    def _handle_graph_topology(self):
+        """Returns visual computation graph node-topic-QoS topology."""
+        self._send_json({
+            "nodes": [
+                {"id": "laser_driver", "label": "/laser_driver", "type": "hardware", "x": 80, "y": 80},
+                {"id": "amcl", "label": "/amcl_localization", "type": "algorithm", "x": 300, "y": 80},
+                {"id": "bt_navigator", "label": "/bt_navigator", "type": "control", "x": 520, "y": 140},
+                {"id": "safety_shield", "label": "/safety_shield_node", "type": "safety", "x": 520, "y": 280},
+                {"id": "motor_driver", "label": "/motor_controller", "type": "hardware", "x": 760, "y": 280},
+                {"id": "legacy_logger", "label": "/legacy_cloud_logger", "type": "telemetry", "x": 300, "y": 240},
+            ],
+            "topics": [
+                {"id": "t_scan", "name": "/scan", "type": "sensor_msgs/msg/LaserScan"},
+                {"id": "t_pose", "name": "/amcl_pose", "type": "geometry_msgs/msg/PoseWithCovarianceStamped"},
+                {"id": "t_cmd_raw", "name": "/cmd_vel_raw", "type": "geometry_msgs/msg/Twist"},
+                {"id": "t_cmd_safe", "name": "/cmd_vel", "type": "geometry_msgs/msg/Twist"},
+                {"id": "t_odom", "name": "/odom", "type": "nav_msgs/msg/Odometry"},
+            ],
+            "edges": [
+                {"from": "laser_driver", "to": "t_scan", "role": "pub", "qos": "BEST_EFFORT / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_scan", "to": "amcl", "role": "sub", "qos": "BEST_EFFORT / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_scan", "to": "safety_shield", "role": "sub", "qos": "BEST_EFFORT / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_scan", "to": "legacy_logger", "role": "sub", "qos": "RELIABLE / TRANSIENT_LOCAL", "status": "INCOMPATIBLE", "issue": "Subscriber requested RELIABLE QoS but publisher offers BEST_EFFORT."},
+                {"from": "amcl", "to": "t_pose", "role": "pub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_pose", "to": "bt_navigator", "role": "sub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "bt_navigator", "to": "t_cmd_raw", "role": "pub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_cmd_raw", "to": "safety_shield", "role": "sub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "safety_shield", "to": "t_cmd_safe", "role": "pub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_cmd_safe", "to": "motor_driver", "role": "sub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "motor_driver", "to": "t_odom", "role": "pub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+                {"from": "t_odom", "to": "amcl", "role": "sub", "qos": "RELIABLE / VOLATILE", "status": "NOMINAL"},
+            ]
+        })
+
+    def _handle_urdf_audit(self, body: Dict[str, Any]):
+        urdf_xml = body.get("urdf", "").strip()
+        if not urdf_xml:
+            self._send_json({"error": "No URDF XML provided."}, status=400)
+            return
+        report = UrdfAuditor.audit_urdf_text(urdf_xml)
+        self._send_json(report)
+
+    def _handle_power_calc(self, body: Dict[str, Any]):
+        try:
+            torque = float(body.get("torque_nm", 2.5))
+            speed = float(body.get("speed_rad_s", 10.0))
+            duration = float(body.get("duration_min", 15.0))
+            resistance = float(body.get("motor_resistance_ohms", 0.85))
+            kt = float(body.get("torque_constant_kt", 0.12))
+            v_bat = float(body.get("battery_voltage", 24.0))
+            ah_bat = float(body.get("battery_capacity_ah", 15.0))
+            t_amb = float(body.get("ambient_temp_c", 25.0))
+
+            res = PowerThermalEngine.calculate_motor_and_power(
+                torque_nm=torque,
+                speed_rad_s=speed,
+                run_duration_min=duration,
+                motor_resistance_ohms=resistance,
+                torque_constant_kt=kt,
+                battery_voltage=v_bat,
+                battery_capacity_ah=ah_bat,
+                ambient_temp_c=t_amb,
+            )
+            self._send_json(res)
+        except Exception as e:
+            self._send_json({"error": f"Failed to compute motor thermal envelope: {e}"}, status=400)
 
     def _handle_bag_analyze(self, body: Dict[str, Any]):
         try:
@@ -557,13 +664,28 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
         sys.stderr.write(f"[{self.log_date_time_string()}] {msg}\n")
 
 
-def start_server(host: str = "127.0.0.1", port: int = 8765):
-    """Starts the RoboSage application HTTP server."""
+def start_server(host: str = "127.0.0.1", port: int = 8765, max_port_attempts: int = 25):
+    """Starts the AOUL application HTTP server with auto-port conflict recovery."""
     import threading
     from robosage.llm.provider import warm_up_local_model
 
-    server_address = (host, port)
-    httpd = HTTPServer(server_address, RoboSageRequestHandler)
+    httpd = None
+    actual_port = port
+    for p in range(port, port + max_port_attempts):
+        try:
+            server_address = (host, p)
+            httpd = HTTPServer(server_address, RoboSageRequestHandler)
+            actual_port = p
+            break
+        except OSError:
+            continue
+
+    if httpd is None:
+        server_address = (host, 0)
+        httpd = HTTPServer(server_address, RoboSageRequestHandler)
+        actual_port = httpd.server_port
+
+    httpd.bound_port = actual_port
     # Default to local Qwen Coder model
     httpd.llm_provider = get_llm_provider(provider_name="qwen")
     httpd.agent_session = AgentSession(provider=httpd.llm_provider)
@@ -573,10 +695,10 @@ def start_server(host: str = "127.0.0.1", port: int = 8765):
     # Pre-warm local Qwen Coder in background thread
     threading.Thread(target=warm_up_local_model, daemon=True).start()
 
-    print(f"🚀 RoboSage Application Server running at http://{host}:{port}/")
+    print(f"🚀 AOUL Application Server running at http://{host}:{actual_port}/")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n🛑 RoboSage server stopped.")
+        print("\n🛑 AOUL server stopped.")
     finally:
         httpd.server_close()
