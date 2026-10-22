@@ -129,6 +129,28 @@ def cmd_audit(args):
             print(f"{indented}")
         print("-" * 70)
 
+    if getattr(args, "sarif", None):
+        from robosage.diagnostics.sarif_exporter import SarifExporter
+        dict_findings = [
+            {
+                "loophole_type": f.loophole_type.value,
+                "severity": f.severity.value,
+                "title": f.title,
+                "description": f.description,
+                "impact": f.impact,
+                "recommended_fix": f.recommended_fix,
+                "line_number": f.line_number,
+                "file_path": f.file_path,
+            }
+            for f in findings
+        ]
+        sarif_content = SarifExporter.to_json_str(dict_findings, target_file=target_path)
+        sarif_path = Path(args.sarif).resolve()
+        sarif_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(sarif_path, "w", encoding="utf-8") as sf:
+            sf.write(sarif_content)
+        print(f"\n{Colors.GREEN}🛡️ OASIS SARIF v2.1.0 report exported to:{Colors.RESET} {sarif_path}")
+
 
 def cmd_triage(args):
     """Diagnoses a ROS 2 log file, terminal output, or stack trace."""
@@ -322,15 +344,216 @@ def cmd_doctor(args):
             print(f"  ➜  {r}")
 
 
+def cmd_bag(args):
+    """Analyzes a flight telemetry log or sample dataset."""
+    print_banner()
+    from robosage.diagnostics.bag_inspector import RosbagInspector
+    import json
+
+    target = args.target
+    if target in ("clean", "nominal"):
+        bag = RosbagInspector.get_sample_flight_bags()["clean_amr_run"]
+    elif target in ("degraded", "faulty", "dropout"):
+        bag = RosbagInspector.get_sample_flight_bags()["degraded_sensor_dropout"]
+    elif os.path.isfile(target):
+        with open(target, "r", encoding="utf-8") as f:
+            bag = json.load(f)
+    else:
+        print(f"{Colors.RED}Target '{target}' not found. Use 'nominal', 'degraded', or a valid JSON flight telemetry file.{Colors.RESET}")
+        sys.exit(1)
+
+    report = RosbagInspector.analyze_flight_bag(bag)
+    status_color = Colors.GREEN if report["overall_status"] == "HEALTHY" else Colors.RED
+    print(f"✈️  Telemetry Status: {status_color}{Colors.BOLD}{report['overall_status']}{Colors.RESET}")
+    print(f"Total Topics: {report['total_topics']} | Total Packets: {report['total_messages']}\n")
+
+    for t in report["topics"]:
+        col = Colors.GREEN if t["status"] == "HEALTHY" else Colors.RED
+        print(f"{col}[{t['status']}] Topic: {t['topic']} ({t['type']}){Colors.RESET}")
+        print(f"   Expected: {t['expected_hz']} Hz | Observed: {t['observed_hz']} Hz | Jitter StdDev: {t['jitter_ms']} ms")
+        print(f"   Delta Min/Max: {t['min_gap_ms']}ms / {t['max_gap_ms']}ms | Dropped Frames: {t['dropped_frames']}")
+        for a in t["anomalies"]:
+            print(f"   ⚠️  {Colors.YELLOW}{a}{Colors.RESET}")
+        print("-" * 60)
+
+
+def cmd_bt(args):
+    """Parses and audits a BehaviorTree.CPP XML file."""
+    print_banner()
+    from robosage.diagnostics.behavior_tree_analyzer import BehaviorTreeAnalyzer
+
+    target = args.target
+    if target in ("nominal", "nav2"):
+        xml_content = BehaviorTreeAnalyzer.get_sample_trees()["nav2_nominal"]["xml"]
+    elif target in ("faulty", "hazard"):
+        xml_content = BehaviorTreeAnalyzer.get_sample_trees()["faulty_tree"]["xml"]
+    elif os.path.isfile(target):
+        with open(target, "r", encoding="utf-8") as f:
+            xml_content = f.read()
+    else:
+        print(f"{Colors.RED}File '{target}' not found. Use 'nominal', 'faulty', or a valid XML file path.{Colors.RESET}")
+        sys.exit(1)
+
+    res = BehaviorTreeAnalyzer.parse_and_audit_xml(xml_content)
+    if not res["valid"]:
+        print(f"{Colors.RED}Tree Invalid: {res['error']}{Colors.RESET}")
+        return
+
+    print(f"{Colors.BOLD}🌲 Behavior Tree Structure Audited:{Colors.RESET}")
+    stats = res["stats"]
+    print(f"Nodes: {stats['nodes']} | Actions: {stats['actions']} | Controls: {stats['controls']} | Blackboard Keys: {stats['blackboard_keys']}\n")
+
+    if not res["findings"]:
+        print(f"{Colors.GREEN}✅ Behavior Tree is robust: No blackboard race conditions or infinite retry traps.{Colors.RESET}")
+    else:
+        print(f"{Colors.RED}{Colors.BOLD}Found {len(res['findings'])} Tree Safety Finding(s):{Colors.RESET}")
+        for f in res["findings"]:
+            col = Colors.RED if f["severity"] == "CRITICAL" else Colors.YELLOW
+            print(f"{col}[{f['severity']}] {f['title']}{Colors.RESET}")
+            print(f"   Description: {f['description']}")
+            print(f"   Impact:      {f['impact']}")
+            print(f"   Fix:         {f['fix']}")
+            print("-" * 60)
+
+
+def cmd_shield(args):
+    """Calculates dynamic stopping envelope and generates safety shield middleware."""
+    print_banner()
+    from robosage.diagnostics.safety_shield import SafetyShieldEngine
+
+    if args.generate:
+        lang = args.generate.lower()
+        if lang in ("cpp", "c++"):
+            code = SafetyShieldEngine.generate_cpp_shield_node(args.name or "safety_shield_node")
+        else:
+            code = SafetyShieldEngine.generate_python_shield_node(args.name or "safety_shield_node")
+        print(f"{Colors.GREEN}🛡️ Generated AOUL Deterministic Safety Shield Node ({lang.upper()}):{Colors.RESET}\n")
+        print(code)
+        return
+
+    res = SafetyShieldEngine.calculate_envelope(
+        commanded_linear_vel=args.vel,
+        commanded_angular_vel=0.0,
+        current_distance_to_obstacle=args.dist,
+        max_linear_vel=args.max_vel,
+        max_linear_accel=args.max_accel,
+        min_safe_distance=args.safe_dist,
+    )
+    col = Colors.RED if res["is_clamped"] else Colors.GREEN
+    print(f"{Colors.BOLD}🛡️ Safety Shield Envelope Evaluation:{Colors.RESET}")
+    print(f"Status:             {col}{'CLAMPED / INTERVENING' if res['is_clamped'] else 'SAFE / PASS-THROUGH'}{Colors.RESET}")
+    print(f"Commanded Vel:      {res['commanded_linear_vel']} m/s")
+    print(f"Safe Clamped Vel:   {res['safe_linear_vel']} m/s")
+    print(f"Obstacle Distance:  {res['obstacle_distance']} m")
+    print(f"Stopping Distance:  {res['stopping_distance_required']} m")
+    print(f"Safety Margin:      {res['safety_margin_m']} m")
+    print(f"Intervention Info:  {col}{res['intervention_reason']}{Colors.RESET}")
+
+
+def cmd_wizard(args):
+    """Interactive wizard to set up AOUL project configuration (themes, model, optional modules)."""
+    print_banner()
+    print(f"{Colors.CYAN}🛠️  AOUL Developer Wizard{Colors.RESET}\n")
+    theme = input("Select theme (cyber/amber/matrix/indigo/crimson/light) [cyber]: ").strip() or "cyber"
+    model = input("Default LLM model (qwen2.5-coder/ollama/gemini) [qwen2.5-coder]: ").strip() or "qwen2.5-coder"
+    enable_pkg = input("Enable optional packages (diagnostics, ci, packaging) [y]/n: ").strip().lower()
+    enable_pkg = enable_pkg != 'n'
+    config = {
+        "theme": theme,
+        "model": model,
+        "optional_modules": {
+            "diagnostics": enable_pkg,
+            "ci": enable_pkg,
+            "packaging": enable_pkg,
+        }
+    }
+    import json, os
+    cfg_path = os.path.join(os.getcwd(), "aoul_config.json")
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2)
+    print(f"{Colors.GREEN}✅ Configuration saved to {cfg_path}{Colors.RESET}\n")
+    print("You can now run the optional modules:")
+    if enable_pkg:
+        print(f"  • {Colors.CYAN}robosage cli ci   {Colors.RESET}- generate CI workflow")
+        print(f"  • {Colors.CYAN}robosage cli package {Colors.RESET}- build distributable packages")
+    print("Happy hacking! 🎉")
+
+def cmd_ci(args):
+    """Generate a starter GitHub Actions CI workflow that runs AOUL diagnostics and SARIF upload."""
+    print_banner()
+    workflow = {
+        "name": "AOUL CI",
+        "on": {"push": {"branches": ["main"]}, "pull_request": {"branches": ["main"]}},
+        "jobs": {
+            "build": {
+                "runs-on": "ubuntu-latest",
+                "steps": [
+                    {"uses": "actions/checkout@v4"},
+                    {"name": "Set up Python", "uses": "actions/setup-python@v5", "with": {"python-version": "3.11"}},
+                    {"name": "Install dependencies", "run": "pip install -r requirements.txt"},
+                    {"name": "Run diagnostics", "run": "python -m robosage.cli audit --sarif /tmp/aoul.sarif ."},
+                    {"name": "Upload SARIF", "uses": "github/codeql-action/upload-sarif@v2", "with": {"sarif_file": "/tmp/aoul.sarif"}}
+                ]
+            }
+        }
+    }
+    import yaml, os
+    out_path = os.path.join(os.getcwd(), ".github", "workflows", "aoul-ci.yml")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(workflow, f, sort_keys=False)
+    print(f"{Colors.GREEN}✅ CI workflow written to {out_path}{Colors.RESET}")
+    print("Commit the file and push to enable automated diagnostics.")
+
+def cmd_package(args):
+    """Build distributable packages (wheel, sdist, optional exe) for AOUL.
+    Uses `build` and optional `pyinstaller` for Windows exe.
+    """
+    print_banner()
+    print(f"{Colors.CYAN}📦  Building Python packages...{Colors.RESET}")
+    try:
+        import build
+    except ImportError:
+        import subprocess, sys
+        print(f"{Colors.YELLOW}Installing build tool...{Colors.RESET}")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "build"])
+        import build
+    import subprocess, sys
+    subprocess.check_call([sys.executable, "-m", "build", "--sdist", "--wheel", "."])
+    print(f"{Colors.GREEN}✅ Packages created in ./dist{Colors.RESET}")
+    if getattr(args, 'exe', False):
+        print(f"{Colors.CYAN}🔧  Building Windows exe...{Colors.RESET}")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
+        subprocess.check_call([sys.executable, "-m", "PyInstaller", "--onefile", "robosage/__main__.py", "-n", "AOUL.exe"])
+        print(f"{Colors.GREEN}✅ Windows exe created in ./dist{Colors.RESET}")
+    if getattr(args, 'dmg', False):
+        print(f"{Colors.CYAN}🔧  Building macOS dmg (requires external script)...{Colors.RESET}")
+        print(f"{Colors.YELLOW}⚠️  Dmg creation not automated in sandbox. Use build_dmg.sh manually.{Colors.RESET}")
+
 def main():
+    parser = argparse.ArgumentParser(
+        prog="robosage",
+        description="RoboSage: AI Robotics Assistant, Safety Auditor \u0026 Diagnostic Copilot",
+    )
     parser = argparse.ArgumentParser(
         prog="robosage",
         description="RoboSage: AI Robotics Assistant, Safety Auditor & Diagnostic Copilot",
     )
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
-    # chat
-    p_chat = subparsers.add_parser("chat", help="Start interactive pair programming with AI robotics assistant")
+    # wizard (developer experience)
+    p_wizard = subparsers.add_parser("wizard", help="Interactive setup wizard for AOUL configuration")
+    p_wizard.set_defaults(func=cmd_wizard)
+
+    # ci (integration)
+    p_ci = subparsers.add_parser("ci", help="Generate CI workflow for AOUL diagnostics")
+    p_ci.set_defaults(func=cmd_ci)
+
+    # package (packaging)
+    p_pkg = subparsers.add_parser("package", help="Build distributable packages (wheel, sdist, optional exe/dmg)")
+    p_pkg.add_argument("--exe", action="store_true", help="Also build Windows exe using PyInstaller")
+    p_pkg.add_argument("--dmg", action="store_true", help="Create macOS dmg (requires external script)")
+    p_pkg.set_defaults(func=cmd_package)
     p_chat.add_argument("--provider", help="LLM Provider: gemini, openai, anthropic, ollama, or auto")
     p_chat.add_argument("--api-key", help="API key for cloud provider")
     p_chat.add_argument("--model", help="Model name (e.g. gemini-1.5-flash, gpt-4o, llama3)")
@@ -338,6 +561,25 @@ def main():
     # audit
     p_audit = subparsers.add_parser("audit", help="Run loophole and safety audit on ROS 2 package or code")
     p_audit.add_argument("path", nargs="?", default=".", help="Path to file or directory to audit (default: .)")
+    p_audit.add_argument("--sarif", help="Export audit findings to OASIS SARIF v2.1.0 JSON format for GitHub / CI")
+
+    # bag (Flight Telemetry Inspector)
+    p_bag = subparsers.add_parser("bag", help="Inspect and triage Rosbag2/MCAP flight telemetry jitter & packet drops")
+    p_bag.add_argument("target", nargs="?", default="nominal", help="Path to telemetry JSON or preset: 'nominal', 'degraded'")
+
+    # bt (Nav2 Behavior Tree Auditor)
+    p_bt = subparsers.add_parser("bt", help="Visualize and audit Nav2 BehaviorTree.CPP v4 XML trees")
+    p_bt.add_argument("target", nargs="?", default="nominal", help="Path to BehaviorTree XML or preset: 'nominal', 'faulty'")
+
+    # shield (Safety Shield Middleware)
+    p_shield = subparsers.add_parser("shield", help="Evaluate dynamic stopping envelope or scaffold safe shield node")
+    p_shield.add_argument("--dist", type=float, default=1.5, help="Obstacle distance (meters)")
+    p_shield.add_argument("--vel", type=float, default=1.0, help="Commanded linear velocity (m/s)")
+    p_shield.add_argument("--max-vel", type=float, default=1.0, help="Maximum linear velocity limit (m/s)")
+    p_shield.add_argument("--max-accel", type=float, default=0.8, help="Maximum linear deceleration (m/s^2)")
+    p_shield.add_argument("--safe-dist", type=float, default=0.35, help="Minimum safe buffer distance (meters)")
+    p_shield.add_argument("--generate", choices=["cpp", "python"], help="Generate verified production node code")
+    p_shield.add_argument("--name", default="safety_shield_node", help="Node name for generation")
 
     # improve (Qwen Robotics Code Optimizer)
     p_improve = subparsers.add_parser("improve", help="Optimize & refactor robotics code using local Qwen")
@@ -385,6 +627,9 @@ def main():
         "generate": cmd_generate,
         "check-qos": cmd_check_qos,
         "doctor": cmd_doctor,
+        "bag": cmd_bag,
+        "bt": cmd_bt,
+        "shield": cmd_shield,
     }
 
     handler = dispatch.get(args.command)

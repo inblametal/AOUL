@@ -13,6 +13,8 @@ from typing import Any, Dict, Optional
 import urllib.parse
 
 from robosage.agent.core import AgentSession
+from robosage.diagnostics.bag_inspector import RosbagInspector
+from robosage.diagnostics.behavior_tree_analyzer import BehaviorTreeAnalyzer
 from robosage.diagnostics.log_analyzer import ROS2LogAnalyzer
 from robosage.diagnostics.loophole_detector import LoopholeDetector
 from robosage.diagnostics.qos_checker import (
@@ -21,6 +23,8 @@ from robosage.diagnostics.qos_checker import (
     ReliabilityPolicy,
     check_qos_compatibility,
 )
+from robosage.diagnostics.safety_shield import SafetyShieldEngine
+from robosage.diagnostics.sarif_exporter import SarifExporter
 from robosage.diagnostics.workspace_inspector import WorkspaceInspector
 from robosage.llm.provider import get_llm_provider
 from robosage.templates.generator import TemplateGenerator
@@ -31,6 +35,7 @@ EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
 class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     """Custom request handler dispatching REST APIs and serving UI assets."""
+    protocol_version = "HTTP/1.1"
 
     def setup(self):
         super().setup()
@@ -67,6 +72,10 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_examples()
             return
 
+        if path == "/api/sample-data":
+            self._handle_sample_data()
+            return
+
         if path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
@@ -101,6 +110,16 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_refactor(body)
         elif path == "/api/save-file":
             self._handle_save_file(body)
+        elif path == "/api/bag-analyze":
+            self._handle_bag_analyze(body)
+        elif path == "/api/bt-analyze":
+            self._handle_bt_analyze(body)
+        elif path == "/api/safety-shield":
+            self._handle_safety_shield(body)
+        elif path == "/api/export-sarif":
+            self._handle_export_sarif(body)
+        elif path == "/api/batch-analyze":
+            self._handle_batch_analyze(body)
         else:
             self._send_json({"error": f"Endpoint '{path}' not found."}, status=404)
 
@@ -127,9 +146,9 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
 
         if stream:
             self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.send_header("Cache-Control", "no-cache, no-transform")
-            self.send_header("Connection", "keep-alive")
+            self.send_header("Connection", "close")
             self.send_header("X-Accel-Buffering", "no")
             self._send_cors_headers()
             self.end_headers()
@@ -144,7 +163,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
                     self.wfile.flush()
                 self.wfile.write(b"data: [DONE]\n\n")
                 self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, OSError):
                 pass
             return
 
@@ -389,6 +408,115 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             "buggy_code": buggy_code,
             "crash_log": crash_log,
         })
+
+    def _handle_sample_data(self):
+        self._send_json({
+            "flight_bags": RosbagInspector.get_sample_flight_bags(),
+            "behavior_trees": BehaviorTreeAnalyzer.get_sample_trees(),
+            "safety_shield_presets": {
+                "amr_warehouse": {
+                    "max_linear_vel": 1.2,
+                    "max_angular_vel": 1.5,
+                    "max_linear_accel": 1.0,
+                    "min_safe_dist": 0.40,
+                    "latency": 0.05,
+                },
+                "heavy_payload_agv": {
+                    "max_linear_vel": 0.6,
+                    "max_angular_vel": 0.8,
+                    "max_linear_accel": 0.4,
+                    "min_safe_dist": 0.80,
+                    "latency": 0.08,
+                },
+                "high_speed_drone": {
+                    "max_linear_vel": 4.0,
+                    "max_angular_vel": 3.0,
+                    "max_linear_accel": 2.5,
+                    "min_safe_dist": 1.20,
+                    "latency": 0.03,
+                }
+            }
+        })
+
+    def _handle_bag_analyze(self, body: Dict[str, Any]):
+        try:
+            report = RosbagInspector.analyze_flight_bag(body)
+            self._send_json(report)
+        except Exception as e:
+            self._send_json({"error": f"Failed to analyze flight telemetry: {e}"}, status=400)
+
+    def _handle_bt_analyze(self, body: Dict[str, Any]):
+        xml_content = body.get("xml", "").strip()
+        if not xml_content:
+            self._send_json({"error": "No Behavior Tree XML provided."}, status=400)
+            return
+        result = BehaviorTreeAnalyzer.parse_and_audit_xml(xml_content)
+        self._send_json(result)
+
+    def _handle_safety_shield(self, body: Dict[str, Any]):
+        action = body.get("action", "calculate")
+        if action == "generate_cpp":
+            code = SafetyShieldEngine.generate_cpp_shield_node(body.get("node_name", "safety_shield_node"))
+            self._send_json({"code": code, "language": "cpp"})
+        elif action == "generate_python":
+            code = SafetyShieldEngine.generate_python_shield_node(body.get("node_name", "safety_shield_node"))
+            self._send_json({"code": code, "language": "python"})
+        else:
+            v_cmd = float(body.get("linear_vel", 1.0))
+            w_cmd = float(body.get("angular_vel", 0.0))
+            dist = float(body.get("obstacle_dist", 1.5))
+            v_max = float(body.get("max_linear_vel", 1.0))
+            w_max = float(body.get("max_angular_vel", 1.5))
+            a_max = float(body.get("max_linear_accel", 0.8))
+            d_safe = float(body.get("min_safe_dist", 0.35))
+            latency = float(body.get("latency", 0.05))
+
+            envelope = SafetyShieldEngine.calculate_envelope(
+                commanded_linear_vel=v_cmd,
+                commanded_angular_vel=w_cmd,
+                current_distance_to_obstacle=dist,
+                max_linear_vel=v_max,
+                max_angular_vel=w_max,
+                max_linear_accel=a_max,
+                min_safe_distance=d_safe,
+                latency_seconds=latency,
+            )
+            self._send_json(envelope)
+
+    def _handle_export_sarif(self, body: Dict[str, Any]):
+        findings = body.get("findings", [])
+        target_file = body.get("target_file", "src/robot_node.py")
+        sarif_doc = SarifExporter.convert_findings_to_sarif(findings, target_file)
+        self._send_json(sarif_doc)
+
+    def _handle_batch_analyze(self, body: Dict[str, Any]):
+        """Accepts a list of bag or BT payloads and returns a combined report.
+        Expected body format:
+        {
+            "tasks": [
+                {"type": "bag", "payload": {...}},
+                {"type": "bt", "payload": "<xml>...</xml>"}
+            ]
+        }
+        """
+        tasks = body.get("tasks", [])
+        reports = []
+        for t in tasks:
+            ttype = t.get("type")
+            payload = t.get("payload")
+            if ttype == "bag":
+                try:
+                    reports.append({"type": "bag", "report": RosbagInspector.analyze_flight_bag(payload)})
+                except Exception as e:
+                    reports.append({"type": "bag", "error": str(e)})
+            elif ttype == "bt":
+                try:
+                    reports.append({"type": "bt", "report": BehaviorTreeAnalyzer.parse_and_audit_xml(payload)})
+                except Exception as e:
+                    reports.append({"type": "bt", "error": str(e)})
+            else:
+                reports.append({"type": ttype, "error": "Unsupported task type"})
+        self._send_json({"batch_reports": reports})
 
     def _serve_index_html(self):
         index_file = WEB_DIR / "index.html"

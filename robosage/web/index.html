@@ -7,6 +7,8 @@
   <!-- Offline Local Vendor Assets (100% Air-Gapped & Offline Ready) -->
   <script src="/vendor/tailwind.js"></script>
   <script src="/vendor/lucide.min.js"></script>
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/OrbitControls.js"></script>
   <script>
     // Safeguard for Lucide icons
     if (typeof lucide === 'undefined') {
@@ -253,34 +255,54 @@
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="p-3 space-y-1.5">
-        <button onclick="switchTab('chat')" id="nav-chat" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-cyan-400 bg-cyan-500/10 border border-cyan-500/20">
+      <nav class="p-3 space-y-1 overflow-y-auto custom-scroll flex-1 max-h-[calc(100vh-175px)]">
+        <button onclick="switchTab('chat')" id="nav-chat" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-cyan-400 bg-cyan-500/10 border border-cyan-500/20">
           <i data-lucide="message-square" class="w-4 h-4"></i>
           <span>AI Copilot</span>
         </button>
-        <button onclick="switchTab('improve')" id="nav-improve" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+        <button onclick="switchTab('improve')" id="nav-improve" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="wrench" class="w-4 h-4 text-emerald-400"></i>
           <span>Qwen Coder Improver</span>
         </button>
-        <button onclick="switchTab('audit')" id="nav-audit" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+        <button onclick="switchTab('audit')" id="nav-audit" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="shield-alert" class="w-4 h-4"></i>
           <span>RoboAudit (Loopholes)</span>
         </button>
-        <button onclick="switchTab('triage')" id="nav-triage" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+        <button onclick="switchTab('triage')" id="nav-triage" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="activity" class="w-4 h-4"></i>
           <span>Log & Crash Triage</span>
         </button>
-        <button onclick="switchTab('qos')" id="nav-qos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+        <button onclick="switchTab('qos')" id="nav-qos" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="wifi" class="w-4 h-4"></i>
           <span>DDS QoS Matrix</span>
         </button>
-        <button onclick="switchTab('generator')" id="nav-generator" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+        <button onclick="switchTab('generator')" id="nav-generator" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="cpu" class="w-4 h-4"></i>
           <span>Node Scaffolder</span>
         </button>
-        <button onclick="switchTab('doctor')" id="nav-doctor" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+        <button onclick="switchTab('doctor')" id="nav-doctor" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
           <i data-lucide="stethoscope" class="w-4 h-4"></i>
           <span>System Doctor</span>
+        </button>
+
+        <div class="pt-2 pb-1 px-3">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Advanced Studio</span>
+        </div>
+        <button onclick="switchTab('twin')" id="nav-twin" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="box" class="w-4 h-4 text-cyan-400"></i>
+          <span>3D Digital Twin</span>
+        </button>
+        <button onclick="switchTab('shield')" id="nav-shield" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+          <span>Safety Shield</span>
+        </button>
+        <button onclick="switchTab('bag')" id="nav-bag" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="disc" class="w-4 h-4 text-indigo-400"></i>
+          <span>Flight Telemetry</span>
+        </button>
+        <button onclick="switchTab('bt')" id="nav-bt" class="tab-btn w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+          <i data-lucide="git-branch" class="w-4 h-4 text-amber-400"></i>
+          <span>Behavior Trees</span>
         </button>
       </nav>
     </div>
@@ -471,6 +493,10 @@
             <button onclick="loadExampleBuggyCode()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
               <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
               <span>Load Buggy Example</span>
+            </button>
+            <button onclick="exportAuditSarif()" id="sarif-btn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-amber-300 border border-amber-500/30 transition flex items-center gap-1.5" title="Export OASIS SARIF v2.1.0 for GitHub / GitLab CI">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Export SARIF</span>
             </button>
             <button onclick="runAudit()" id="audit-btn" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition">
               <i data-lucide="play" class="w-3.5 h-3.5"></i>
@@ -742,6 +768,347 @@
         </div>
       </section>
 
+      <!-- ========================================== -->
+      <!-- TAB 7: 3D DIGITAL TWIN & KINEMATICS STUDIO -->
+      <!-- ========================================== -->
+      <section id="tab-twin" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="box" class="w-5 h-5 text-cyan-400"></i>
+              3D WebGL Digital Twin & Kinematics Studio
+            </h3>
+            <p class="text-xs text-slate-400">Interactive Forward Kinematics, TF2 coordinate frame transforms, and multi-DOF robot articulators (100% offline).</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="twin-model-select" onchange="switchTwinModel(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-cyan-300 rounded-lg px-3 py-1.5 outline-none font-mono">
+              <option value="arm">6-DOF Industrial Manipulator</option>
+              <option value="amr">Autonomous Mobile Robot (AMR)</option>
+            </select>
+            <button onclick="resetTwinCamera()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+              <span>Reset View</span>
+            </button>
+            <button onclick="toggleTwinAnimation()" id="twin-demo-btn" class="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Demo Trajectory</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[500px]">
+          <!-- 3D Canvas Viewport -->
+          <div class="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden relative shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 z-10">
+              <span class="font-mono flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                WebGL 3D Viewport (Three.js r128 Local)
+              </span>
+              <div class="flex items-center gap-3 text-[11px]">
+                <span class="text-red-400 font-mono">X: Red</span>
+                <span class="text-emerald-400 font-mono">Y: Green</span>
+                <span class="text-blue-400 font-mono">Z: Blue</span>
+              </div>
+            </div>
+            <div id="twin-viewport" class="flex-1 w-full h-full min-h-[420px] bg-slate-950 relative flex items-center justify-center">
+              <!-- WebGL Canvas appended dynamically -->
+            </div>
+          </div>
+
+          <!-- Kinematics & Joint Controls -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-y-auto custom-scroll space-y-4">
+            <div class="border-b border-slate-800 pb-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5 mb-2">
+                <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                Joint Positions (Forward Kinematics)
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                    <span>Base Pan (J1)</span>
+                    <span id="j1-val">0°</span>
+                  </div>
+                  <input type="range" id="j1-slider" min="-180" max="180" value="0" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                </div>
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                    <span>Shoulder Pitch (J2)</span>
+                    <span id="j2-val">30°</span>
+                  </div>
+                  <input type="range" id="j2-slider" min="-90" max="90" value="30" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                </div>
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                    <span>Elbow (J3)</span>
+                    <span id="j3-val">-45°</span>
+                  </div>
+                  <input type="range" id="j3-slider" min="-150" max="150" value="-45" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                </div>
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                    <span>Wrist Pitch (J4)</span>
+                    <span id="j4-val">15°</span>
+                  </div>
+                  <input type="range" id="j4-slider" min="-90" max="90" value="15" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                </div>
+                <div>
+                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                    <span>Wrist Roll (J5)</span>
+                    <span id="j5-val">0°</span>
+                  </div>
+                  <input type="range" id="j5-slider" min="-180" max="180" value="0" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                </div>
+              </div>
+            </div>
+
+            <!-- Cartesian Pose -->
+            <div class="bg-slate-950/70 p-3 rounded-lg border border-slate-800 space-y-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tool Frame Pose (tool0 w.r.t base_link)</span>
+              <div class="grid grid-cols-3 gap-2 font-mono text-[11px]">
+                <div class="bg-slate-900 p-1.5 rounded text-center">
+                  <span class="text-slate-500 block text-[9px]">X (m)</span>
+                  <span id="pose-x" class="text-cyan-300 font-semibold">0.452</span>
+                </div>
+                <div class="bg-slate-900 p-1.5 rounded text-center">
+                  <span class="text-slate-500 block text-[9px]">Y (m)</span>
+                  <span id="pose-y" class="text-cyan-300 font-semibold">0.000</span>
+                </div>
+                <div class="bg-slate-900 p-1.5 rounded text-center">
+                  <span class="text-slate-500 block text-[9px]">Z (m)</span>
+                  <span id="pose-z" class="text-cyan-300 font-semibold">0.612</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                <span>Reachability:</span>
+                <span class="text-emerald-400 font-semibold">NOMINAL (Singularity Free)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 8: SAFETY SHIELD DETERMINISTIC MIDDLEWARE -->
+      <!-- ========================================== -->
+      <section id="tab-shield" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+              Safety Shield Deterministic Runtime Middleware
+            </h3>
+            <p class="text-xs text-slate-400">Dynamic velocity & acceleration envelope clamping with guaranteed stopping curves $v_{safe}(d) = \sqrt{2 a_{max} (d - d_{safe})}$.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="generateShieldCode('cpp')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-cyan-300 border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="code" class="w-3.5 h-3.5"></i>
+              <span>Generate C++ Node</span>
+            </button>
+            <button onclick="generateShieldCode('python')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-emerald-300 border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              <span>Generate Python Node</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[450px]">
+          <!-- Input Sliders -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Kinematic & Sensor Boundary Parameters</h4>
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Commanded Linear Velocity ($v_{cmd}$):</span>
+                  <span id="shield-vcmd-val" class="text-cyan-400 font-bold">1.20 m/s</span>
+                </div>
+                <input type="range" id="shield-vcmd" min="0" max="2.5" step="0.05" value="1.20" oninput="runSafetyShieldCalc()" class="w-full accent-cyan-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Distance to Obstacle ($d_{obs}$):</span>
+                  <span id="shield-dist-val" class="text-amber-400 font-bold">0.65 m</span>
+                </div>
+                <input type="range" id="shield-dist" min="0.05" max="3.0" step="0.05" value="0.65" oninput="runSafetyShieldCalc()" class="w-full accent-amber-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Max Deceleration ($a_{max}$):</span>
+                  <span id="shield-amax-val" class="text-slate-300 font-bold">0.80 m/s²</span>
+                </div>
+                <input type="range" id="shield-amax" min="0.2" max="2.0" step="0.1" value="0.80" oninput="runSafetyShieldCalc()" class="w-full accent-slate-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-300 font-mono mb-1">
+                  <span>Emergency Buffer Distance ($d_{safe}$):</span>
+                  <span id="shield-dsafe-val" class="text-slate-300 font-bold">0.35 m</span>
+                </div>
+                <input type="range" id="shield-dsafe" min="0.1" max="1.0" step="0.05" value="0.35" oninput="runSafetyShieldCalc()" class="w-full accent-slate-400 h-1.5 bg-slate-800 rounded cursor-pointer">
+              </div>
+            </div>
+          </div>
+
+          <!-- Clamping Output -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Deterministic Safety Shield Interceptor</h4>
+            <div id="shield-status-card" class="p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                  <span id="shield-status-title">INTERVENING (Velocity Clamped)</span>
+                </span>
+                <span id="shield-clamped-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">CLAMPED</span>
+              </div>
+              <p id="shield-reason" class="text-xs text-slate-200 leading-relaxed font-mono">
+                Commanded 1.20 m/s exceeds dynamic braking envelope (0.69 m/s for 0.65m obstacle distance).
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Raw Commanded</span>
+                <span id="shield-out-raw" class="text-base font-bold text-slate-300">1.20 m/s</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Shielded Output</span>
+                <span id="shield-out-safe" class="text-base font-bold text-cyan-400">0.69 m/s</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Stopping Dist Req</span>
+                <span id="shield-out-stop" class="text-base font-bold text-slate-300">0.90 m</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <span class="text-[10px] text-slate-500 block uppercase">Residual Buffer</span>
+                <span id="shield-out-margin" class="text-base font-bold text-emerald-400">0.30 m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 9: FLIGHT TELEMETRY & ROSBAG2 INSPECTOR -->
+      <!-- ========================================== -->
+      <section id="tab-bag" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="disc" class="w-5 h-5 text-indigo-400"></i>
+              Rosbag2 & MCAP Flight Telemetry Inspector
+            </h3>
+            <p class="text-xs text-slate-400">Time-series timing jitter ($\sigma$), sensor frame dropouts, and timestamp divergence diagnosis.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="bag-preset-select" onchange="loadSampleFlightBag(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-indigo-300 rounded-lg px-3 py-1.5 outline-none font-mono">
+              <option value="nominal">Nominal AMR Navigation Run (Clean)</option>
+              <option value="degraded">Degraded LiDAR Dropout & Controller Jitter Flight</option>
+            </select>
+            <button onclick="runBagAnalysis()" id="bag-run-btn" class="px-4 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Analyze Flight Bag</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4 flex-1">
+          <!-- Overview Cards -->
+          <div class="grid grid-cols-4 gap-4" id="bag-metrics">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <span class="text-xs text-slate-400">Overall Flight Health</span>
+              <p id="bag-overall-status" class="text-lg font-bold text-emerald-400 mt-1">HEALTHY</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <span class="text-xs text-slate-400">Total Packets Parsed</span>
+              <p id="bag-total-packets" class="text-lg font-bold text-white mt-1">350</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <span class="text-xs text-slate-400">Monitored Topics</span>
+              <p id="bag-total-topics" class="text-lg font-bold text-white mt-1">2</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+              <span class="text-xs text-slate-400">Degraded Topics</span>
+              <p id="bag-degraded-topics" class="text-lg font-bold text-slate-300 mt-1">0</p>
+            </div>
+          </div>
+
+          <!-- Topics Table -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between text-xs text-slate-300 font-semibold">
+              <span>Telemetry Topic Timing Breakdown</span>
+              <span class="text-[11px] text-slate-500">MCAP Standard Jitter Metric</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-950/40 text-slate-400 font-mono text-[11px] border-b border-slate-800">
+                  <tr>
+                    <th class="p-3">Topic</th>
+                    <th class="p-3">Type</th>
+                    <th class="p-3">Nominal Hz</th>
+                    <th class="p-3">Observed Hz</th>
+                    <th class="p-3">Jitter (σ)</th>
+                    <th class="p-3">Min/Max Gap</th>
+                    <th class="p-3">Dropped Frames</th>
+                    <th class="p-3">Health Status</th>
+                  </tr>
+                </thead>
+                <tbody id="bag-table-body" class="divide-y divide-slate-800 font-mono text-slate-300">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 10: NAV2 BEHAVIORTREE.CPP STUDIO -->
+      <!-- ========================================== -->
+      <section id="tab-bt" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="git-branch" class="w-5 h-5 text-amber-400"></i>
+              Nav2 & BehaviorTree.CPP v4 Visualizer & Safety Auditor
+            </h3>
+            <p class="text-xs text-slate-400">Audits blackboard port write collisions, recovery fallback completeness, and infinite retry loops.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="bt-preset-select" onchange="loadSampleBehaviorTree(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-amber-300 rounded-lg px-3 py-1.5 outline-none font-mono">
+              <option value="nominal">Nav2 Standard NavigateToPose with Recovery</option>
+              <option value="faulty">Hazardous Tree (Blackboard Race & Infinite Retry)</option>
+            </select>
+            <button onclick="runBehaviorTreeAudit()" id="bt-run-btn" class="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Audit Tree XML</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[480px]">
+          <!-- Tree XML Editor -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-mono">behavior_tree.xml</span>
+              <span class="text-[11px] text-slate-500">BehaviorTree.CPP v4 Schema</span>
+            </div>
+            <textarea id="bt-xml-input" class="w-full flex-1 p-4 bg-transparent font-mono text-xs text-slate-200 outline-none resize-none custom-scroll" placeholder="<root main_tree_to_execute='MainTree'>..."></textarea>
+          </div>
+
+          <!-- Tree Hierarchy & Safety Findings -->
+          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-medium flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-amber-400"></i>
+                Audited Tree Nodes & Safety Findings
+              </span>
+              <span id="bt-stats-badge" class="font-mono text-xs text-slate-400">0 nodes</span>
+            </div>
+            <div id="bt-audit-output" class="flex-1 p-4 overflow-y-auto custom-scroll space-y-4 text-xs text-slate-300">
+              <!-- Rendered tree visualizer -->
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -813,7 +1180,11 @@
         triage: '<i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i> ROS 2 Log & Runtime Crash Triage Engine',
         qos: '<i data-lucide="wifi" class="w-4 h-4 text-cyan-400"></i> DDS Quality of Service (QoS) RxO Matrix',
         generator: '<i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i> Loophole-Free ROS 2 Node Boilerplate Generator',
-        doctor: '<i data-lucide="stethoscope" class="w-4 h-4 text-cyan-400"></i> Robotics System & Workspace Environment Health'
+        doctor: '<i data-lucide="stethoscope" class="w-4 h-4 text-cyan-400"></i> Robotics System & Workspace Environment Health',
+        twin: '<i data-lucide="box" class="w-4 h-4 text-cyan-400"></i> 3D WebGL Digital Twin & Kinematics Studio',
+        shield: '<i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Safety Shield Deterministic Runtime Middleware',
+        bag: '<i data-lucide="disc" class="w-4 h-4 text-indigo-400"></i> Rosbag2 & MCAP Flight Telemetry Inspector',
+        bt: '<i data-lucide="git-branch" class="w-4 h-4 text-amber-400"></i> Nav2 BehaviorTree.CPP v4 Visualizer & Auditor'
       };
       document.getElementById('view-title').innerHTML = titles[tabId] || 'AOUL';
       lucide.createIcons();
@@ -821,6 +1192,10 @@
       if (tabId === 'doctor') loadDoctorReport();
       if (tabId === 'qos') runQoSCheck();
       if (tabId === 'generator' && !document.getElementById('gen-code-preview').value) generateTemplate();
+      if (tabId === 'twin') initThreeDigitalTwin();
+      if (tabId === 'shield') runSafetyShieldCalc();
+      if (tabId === 'bag') loadSampleFlightBag(document.getElementById('bag-preset-select').value);
+      if (tabId === 'bt') loadSampleBehaviorTree(document.getElementById('bt-preset-select').value);
     }
 
     // ==========================================
@@ -1157,8 +1532,30 @@
           }
         }
       } catch (err) {
-        removeThinkingIndicator();
-        appendChatMessage('assistant', `⚠️ Connection Note: ${err.message}. Local engine is active.`);
+        // Auto-fallback: if streaming fails (e.g. WKWebView Load failed error), fall back to robust standard JSON request
+        try {
+          const fallbackResp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              message: text,
+              provider: providerName,
+              model: modelName,
+              api_key: apiKey,
+              stream: false
+            })
+          });
+          const data = await fallbackResp.json();
+          removeThinkingIndicator();
+          if (data.reply) {
+            appendChatMessage('assistant', data.reply, data.provider);
+          } else {
+            appendChatMessage('assistant', `⚠️ ${data.error || 'Failed to get response.'}`);
+          }
+        } catch (fallbackErr) {
+          removeThinkingIndicator();
+          appendChatMessage('assistant', `⚠️ Connection Note: ${fallbackErr.message || err.message}. Local engine is active.`);
+        }
       } finally {
         removeThinkingIndicator();
         sendBtn.disabled = false;
@@ -1599,6 +1996,591 @@
         }
       } catch (err) {
         console.warn('Could not auto-fetch local models:', err);
+      }
+    }
+
+    // ==========================================
+    // SARIF EXPORTER MODULE
+    // ==========================================
+    async function exportAuditSarif() {
+      const code = document.getElementById('audit-code-input').value.trim();
+      if (!code) {
+        alert('Please paste or load code to audit first.');
+        return;
+      }
+      try {
+        const auditResp = await fetch('/api/audit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ code: code })
+        });
+        const auditData = await auditResp.json();
+        const findings = auditData.findings || [];
+
+        const sarifResp = await fetch('/api/export-sarif', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            findings: findings,
+            target_file: 'src/robot_node.py'
+          })
+        });
+        const sarifDoc = await sarifResp.json();
+
+        const blob = new Blob([JSON.stringify(sarifDoc, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'aoul-findings.sarif';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('Failed to export SARIF report: ' + err);
+      }
+    }
+
+    // ==========================================
+    // 3D DIGITAL TWIN MODULE (THREE.JS)
+    // ==========================================
+    let twinScene, twinCamera, twinRenderer, twinControls;
+    let armGroup, amrGroup, baseLinkAxes, toolAxes;
+    let isTwinAnimating = false;
+    let twinAnimTime = 0;
+    let armJoints = {};
+
+    function initThreeDigitalTwin() {
+      const container = document.getElementById('twin-viewport');
+      if (!container) return;
+      if (twinRenderer) {
+        // Resize existing canvas
+        const w = container.clientWidth || 600;
+        const h = container.clientHeight || 450;
+        twinCamera.aspect = w / h;
+        twinCamera.updateProjectionMatrix();
+        twinRenderer.setSize(w, h);
+        return;
+      }
+
+      if (typeof THREE === 'undefined') {
+        container.innerHTML = '<div class="text-slate-400 text-xs p-8 text-center">Three.js loading offline...</div>';
+        return;
+      }
+
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 450;
+
+      twinScene = new THREE.Scene();
+      twinScene.background = new THREE.Color(0x060911);
+
+      twinCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      twinCamera.position.set(2.4, 2.0, 2.8);
+
+      twinRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      twinRenderer.setSize(width, height);
+      twinRenderer.setPixelRatio(window.devicePixelRatio || 1);
+      container.innerHTML = '';
+      container.appendChild(twinRenderer.domElement);
+
+      if (typeof THREE.OrbitControls !== 'undefined') {
+        twinControls = new THREE.OrbitControls(twinCamera, twinRenderer.domElement);
+        twinControls.enableDamping = true;
+        twinControls.dampingFactor = 0.05;
+        twinControls.maxPolarAngle = Math.PI / 2 + 0.1;
+      }
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.6);
+      twinScene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(5, 10, 7);
+      twinScene.add(dirLight);
+
+      // Grid Floor
+      const grid = new THREE.GridHelper(8, 16, 0x06b6d4, 0x1e293b);
+      grid.position.y = -0.01;
+      twinScene.add(grid);
+
+      // Base World Axes
+      baseLinkAxes = new THREE.AxesHelper(0.5);
+      twinScene.add(baseLinkAxes);
+
+      // Construct 6-DOF Robotic Arm
+      buildRoboticArmModel();
+      buildAmrModel();
+      switchTwinModel('arm');
+
+      // Animation loop
+      function animateTwin() {
+        requestAnimationFrame(animateTwin);
+        if (twinControls) twinControls.update();
+
+        if (isTwinAnimating) {
+          twinAnimTime += 0.02;
+          const j1 = Math.sin(twinAnimTime * 0.8) * 60;
+          const j2 = Math.sin(twinAnimTime * 0.5) * 40 + 20;
+          const j3 = Math.cos(twinAnimTime * 0.6) * 50 - 30;
+          const j4 = Math.sin(twinAnimTime * 1.1) * 35;
+          const j5 = Math.cos(twinAnimTime * 0.9) * 80;
+
+          document.getElementById('j1-slider').value = j1;
+          document.getElementById('j2-slider').value = j2;
+          document.getElementById('j3-slider').value = j3;
+          document.getElementById('j4-slider').value = j4;
+          document.getElementById('j5-slider').value = j5;
+          updateArmJoints();
+        }
+
+        twinRenderer.render(twinScene, twinCamera);
+      }
+      animateTwin();
+
+      window.addEventListener('resize', () => {
+        if (!twinRenderer || !container) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        twinCamera.aspect = w / h;
+        twinCamera.updateProjectionMatrix();
+        twinRenderer.setSize(w, h);
+      });
+    }
+
+    function buildRoboticArmModel() {
+      armGroup = new THREE.Group();
+
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
+      const cyanMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.3, metalness: 0.7 });
+      const jointMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.2, metalness: 0.9 });
+      const toolMat = new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.3, metalness: 0.8 });
+
+      // Base pedestal
+      const basePed = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.2, 32), baseMat);
+      basePed.position.y = 0.1;
+      armGroup.add(basePed);
+
+      // J1: Pan Group
+      armJoints.j1 = new THREE.Group();
+      armJoints.j1.position.y = 0.2;
+      armGroup.add(armJoints.j1);
+
+      const shoulderBase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 24), baseMat);
+      armJoints.j1.add(shoulderBase);
+
+      // J2: Shoulder Pitch Group
+      armJoints.j2 = new THREE.Group();
+      armJoints.j2.position.y = 0.15;
+      armJoints.j1.add(armJoints.j2);
+
+      const shoulderSphere = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), jointMat);
+      armJoints.j2.add(shoulderSphere);
+
+      // Upper Arm Link (L1 = 0.6m)
+      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.6, 24), cyanMat);
+      upperArm.position.y = 0.3;
+      armJoints.j2.add(upperArm);
+
+      // J3: Elbow Pitch Group
+      armJoints.j3 = new THREE.Group();
+      armJoints.j3.position.y = 0.6;
+      armJoints.j2.add(armJoints.j3);
+
+      const elbowSphere = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 24), jointMat);
+      armJoints.j3.add(elbowSphere);
+
+      // Forearm Link (L2 = 0.5m)
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.5, 24), cyanMat);
+      forearm.position.y = 0.25;
+      armJoints.j3.add(forearm);
+
+      // J4: Wrist Pitch Group
+      armJoints.j4 = new THREE.Group();
+      armJoints.j4.position.y = 0.5;
+      armJoints.j3.add(armJoints.j4);
+
+      const wristSphere = new THREE.Mesh(new THREE.SphereGeometry(0.12, 20, 20), jointMat);
+      armJoints.j4.add(wristSphere);
+
+      // J5: Wrist Roll Group
+      armJoints.j5 = new THREE.Group();
+      armJoints.j5.position.y = 0.1;
+      armJoints.j4.add(armJoints.j5);
+
+      // Tool / End Effector Gripper
+      const toolBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), toolMat);
+      armJoints.j5.add(toolBase);
+
+      // Gripper fingers
+      const f1 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.03), jointMat);
+      f1.position.set(-0.04, 0.07, 0);
+      armJoints.j5.add(f1);
+      const f2 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.03), jointMat);
+      f2.position.set(0.04, 0.07, 0);
+      armJoints.j5.add(f2);
+
+      // Tool coordinate frame (TF2 tool0)
+      toolAxes = new THREE.AxesHelper(0.25);
+      toolAxes.position.y = 0.12;
+      armJoints.j5.add(toolAxes);
+
+      twinScene.add(armGroup);
+      updateArmJoints();
+    }
+
+    function buildAmrModel() {
+      amrGroup = new THREE.Group();
+      const chassisMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+      const lidarMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.2, metalness: 0.9 });
+
+      // Chassis
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.6), chassisMat);
+      chassis.position.y = 0.18;
+      amrGroup.add(chassis);
+
+      // Wheels
+      const leftWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 24), wheelMat);
+      leftWheel.rotation.z = Math.PI / 2;
+      leftWheel.position.set(0.25, 0.12, 0.33);
+      amrGroup.add(leftWheel);
+
+      const rightWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 24), wheelMat);
+      rightWheel.rotation.z = Math.PI / 2;
+      rightWheel.position.set(0.25, 0.12, -0.33);
+      amrGroup.add(rightWheel);
+
+      // Front caster
+      const caster = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), wheelMat);
+      caster.position.set(-0.28, 0.07, 0);
+      amrGroup.add(caster);
+
+      // LiDAR Dome
+      const lidar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.09, 24), lidarMat);
+      lidar.position.set(0.15, 0.32, 0);
+      amrGroup.add(lidar);
+
+      // Laser scan simulation ray ring
+      const ringGeo = new THREE.RingGeometry(0.2, 2.5, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
+      const laserRing = new THREE.Mesh(ringGeo, ringMat);
+      laserRing.rotation.x = Math.PI / 2;
+      laserRing.position.set(0.15, 0.32, 0);
+      amrGroup.add(laserRing);
+
+      amrGroup.visible = false;
+      twinScene.add(amrGroup);
+    }
+
+    function switchTwinModel(modelType) {
+      if (modelType === 'arm') {
+        if (armGroup) armGroup.visible = true;
+        if (amrGroup) amrGroup.visible = false;
+      } else {
+        if (armGroup) armGroup.visible = false;
+        if (amrGroup) amrGroup.visible = true;
+      }
+    }
+
+    function updateArmJoints() {
+      if (!armJoints.j1) return;
+      const deg2rad = Math.PI / 180;
+      const j1 = parseFloat(document.getElementById('j1-slider').value) || 0;
+      const j2 = parseFloat(document.getElementById('j2-slider').value) || 0;
+      const j3 = parseFloat(document.getElementById('j3-slider').value) || 0;
+      const j4 = parseFloat(document.getElementById('j4-slider').value) || 0;
+      const j5 = parseFloat(document.getElementById('j5-slider').value) || 0;
+
+      document.getElementById('j1-val').innerText = `${j1.toFixed(0)}°`;
+      document.getElementById('j2-val').innerText = `${j2.toFixed(0)}°`;
+      document.getElementById('j3-val').innerText = `${j3.toFixed(0)}°`;
+      document.getElementById('j4-val').innerText = `${j4.toFixed(0)}°`;
+      document.getElementById('j5-val').innerText = `${j5.toFixed(0)}°`;
+
+      armJoints.j1.rotation.y = j1 * deg2rad;
+      armJoints.j2.rotation.z = j2 * deg2rad;
+      armJoints.j3.rotation.z = j3 * deg2rad;
+      armJoints.j4.rotation.z = j4 * deg2rad;
+      armJoints.j5.rotation.y = j5 * deg2rad;
+
+      // Calculate tool world position
+      if (toolAxes) {
+        toolAxes.updateMatrixWorld();
+        const worldPos = new THREE.Vector3();
+        toolAxes.getWorldPosition(worldPos);
+
+        document.getElementById('pose-x').innerText = worldPos.x.toFixed(3);
+        document.getElementById('pose-y').innerText = worldPos.z.toFixed(3); // Map Three Z to robotics Y
+        document.getElementById('pose-z').innerText = worldPos.y.toFixed(3); // Map Three Y to robotics Z
+      }
+    }
+
+    function resetTwinCamera() {
+      if (twinCamera && twinControls) {
+        twinCamera.position.set(2.4, 2.0, 2.8);
+        twinControls.target.set(0, 0.4, 0);
+        twinControls.update();
+      }
+    }
+
+    function toggleTwinAnimation() {
+      isTwinAnimating = !isTwinAnimating;
+      const btn = document.getElementById('twin-demo-btn');
+      if (isTwinAnimating) {
+        btn.innerHTML = '<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Stop Demo</span>';
+        btn.className = 'px-3.5 py-1.5 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold flex items-center gap-1.5 transition';
+      } else {
+        btn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Demo Trajectory</span>';
+        btn.className = 'px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition';
+      }
+      lucide.createIcons();
+    }
+
+    // ==========================================
+    // SAFETY SHIELD MIDDLEWARE MODULE
+    // ==========================================
+    async function runSafetyShieldCalc() {
+      const vcmd = parseFloat(document.getElementById('shield-vcmd').value);
+      const dist = parseFloat(document.getElementById('shield-dist').value);
+      const amax = parseFloat(document.getElementById('shield-amax').value);
+      const dsafe = parseFloat(document.getElementById('shield-dsafe').value);
+
+      document.getElementById('shield-vcmd-val').innerText = vcmd.toFixed(2) + ' m/s';
+      document.getElementById('shield-dist-val').innerText = dist.toFixed(2) + ' m';
+      document.getElementById('shield-amax-val').innerText = amax.toFixed(2) + ' m/s²';
+      document.getElementById('shield-dsafe-val').innerText = dsafe.toFixed(2) + ' m';
+
+      try {
+        const resp = await fetch('/api/safety-shield', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            linear_vel: vcmd,
+            obstacle_dist: dist,
+            max_linear_accel: amax,
+            min_safe_dist: dsafe
+          })
+        });
+        const res = await resp.json();
+
+        document.getElementById('shield-out-raw').innerText = res.commanded_linear_vel.toFixed(2) + ' m/s';
+        document.getElementById('shield-out-safe').innerText = res.safe_linear_vel.toFixed(2) + ' m/s';
+        document.getElementById('shield-out-stop').innerText = res.stopping_distance_required.toFixed(2) + ' m';
+        document.getElementById('shield-out-margin').innerText = res.safety_margin_m.toFixed(2) + ' m';
+        document.getElementById('shield-reason').innerText = res.intervention_reason;
+
+        const card = document.getElementById('shield-status-card');
+        const title = document.getElementById('shield-status-title');
+        const badge = document.getElementById('shield-clamped-badge');
+
+        if (res.safe_linear_vel === 0 && res.is_clamped) {
+          card.className = 'p-4 rounded-xl border border-red-500/50 bg-red-500/10 space-y-2';
+          title.className = 'text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5';
+          title.innerHTML = '<i data-lucide="shield-alert" class="w-4 h-4"></i> EMERGENCY STOP ENGAGED';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/30';
+          badge.innerText = 'E-STOP HALT';
+        } else if (res.is_clamped) {
+          card.className = 'p-4 rounded-xl border border-amber-500/50 bg-amber-500/10 space-y-2';
+          title.className = 'text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5';
+          title.innerHTML = '<i data-lucide="alert-triangle" class="w-4 h-4"></i> INTERVENING (Velocity Clamped)';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          badge.innerText = 'CLAMPED';
+        } else {
+          card.className = 'p-4 rounded-xl border border-emerald-500/50 bg-emerald-500/10 space-y-2';
+          title.className = 'text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5';
+          title.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i> NOMINAL (Safe Envelope)';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          badge.innerText = 'PASS-THROUGH';
+        }
+        lucide.createIcons();
+      } catch (e) {
+        console.error('Safety shield calc error:', e);
+      }
+    }
+
+    async function generateShieldCode(lang) {
+      try {
+        const resp = await fetch('/api/safety-shield', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: lang === 'cpp' ? 'generate_cpp' : 'generate_python' })
+        });
+        const res = await resp.json();
+        const code = res.code;
+
+        // Switch to generator preview or copy to clipboard
+        switchTab('generator');
+        document.getElementById('gen-code-preview').value = code;
+        document.getElementById('gen-node-name').value = `safe_shield_${lang}_node`;
+        alert(`🛡️ AOUL Safety Shield (${lang.toUpperCase()}) generated in Node Scaffolder!`);
+      } catch (e) {
+        alert('Could not generate shield node: ' + e);
+      }
+    }
+
+    // ==========================================
+    // FLIGHT TELEMETRY & ROSBAG2 INSPECTOR
+    // ==========================================
+    let cachedFlightBags = null;
+
+    async function loadSampleFlightBag(preset) {
+      try {
+        if (!cachedFlightBags) {
+          const resp = await fetch('/api/sample-data');
+          const data = await resp.json();
+          cachedFlightBags = data.flight_bags;
+        }
+        runBagAnalysis();
+      } catch (e) {
+        console.error('Failed to load sample flight bags:', e);
+      }
+    }
+
+    async function runBagAnalysis() {
+      const presetKey = document.getElementById('bag-preset-select').value === 'nominal' ? 'clean_amr_run' : 'degraded_sensor_dropout';
+      const bagData = cachedFlightBags ? cachedFlightBags[presetKey] : {
+        topics: [
+          { name: '/scan', type: 'sensor_msgs/msg/LaserScan', expected_hz: 20.0, timestamps: [0.0, 0.05, 0.10, 0.15, 0.20] },
+          { name: '/odom', type: 'nav_msgs/msg/Odometry', expected_hz: 50.0, timestamps: [0.0, 0.02, 0.04, 0.06, 0.08] }
+        ]
+      };
+
+      try {
+        const resp = await fetch('/api/bag-analyze', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(bagData)
+        });
+        const rep = await resp.json();
+
+        document.getElementById('bag-overall-status').innerText = rep.overall_status;
+        document.getElementById('bag-overall-status').className = rep.overall_status === 'HEALTHY' ? 'text-lg font-bold text-emerald-400 mt-1' : 'text-lg font-bold text-red-400 mt-1';
+        document.getElementById('bag-total-packets').innerText = rep.total_messages;
+        document.getElementById('bag-total-topics').innerText = rep.total_topics;
+        document.getElementById('bag-degraded-topics').innerText = rep.critical_topics + rep.warning_topics;
+
+        const tbody = document.getElementById('bag-table-body');
+        tbody.innerHTML = '';
+        rep.topics.forEach(t => {
+          const statusCol = t.status === 'HEALTHY' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
+                            t.status === 'WARNING' ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' :
+                            'text-red-400 bg-red-500/10 border-red-500/30';
+
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-800/40 transition';
+          tr.innerHTML = `
+            <td class="p-3 font-semibold text-cyan-300">${escapeHtml(t.topic)}</td>
+            <td class="p-3 text-slate-400 text-[11px]">${escapeHtml(t.type)}</td>
+            <td class="p-3 text-slate-300">${t.expected_hz} Hz</td>
+            <td class="p-3 text-white font-bold">${t.observed_hz} Hz</td>
+            <td class="p-3 ${t.jitter_ms > 20 ? 'text-red-400' : 'text-slate-300'}">${t.jitter_ms} ms</td>
+            <td class="p-3 text-slate-400 text-[11px]">${t.min_gap_ms} / ${t.max_gap_ms} ms</td>
+            <td class="p-3 ${t.dropped_frames > 0 ? 'text-red-400 font-bold' : 'text-slate-400'}">${t.dropped_frames}</td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${statusCol}">${t.status}</span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error('Failed to analyze telemetry bag:', e);
+      }
+    }
+
+    // ==========================================
+    // NAV2 BEHAVIORTREE.CPP STUDIO
+    // ==========================================
+    let cachedTrees = null;
+
+    async function loadSampleBehaviorTree(preset) {
+      try {
+        if (!cachedTrees) {
+          const resp = await fetch('/api/sample-data');
+          const data = await resp.json();
+          cachedTrees = data.behavior_trees;
+        }
+        const treeKey = preset === 'nominal' ? 'nav2_nominal' : 'faulty_tree';
+        if (cachedTrees && cachedTrees[treeKey]) {
+          document.getElementById('bt-xml-input').value = cachedTrees[treeKey].xml;
+          runBehaviorTreeAudit();
+        }
+      } catch (e) {
+        console.error('Failed to load sample behavior trees:', e);
+      }
+    }
+
+    async function runBehaviorTreeAudit() {
+      const xml = document.getElementById('bt-xml-input').value.trim();
+      if (!xml) {
+        alert('Please paste BehaviorTree.CPP XML to audit.');
+        return;
+      }
+
+      const out = document.getElementById('bt-audit-output');
+      out.innerHTML = '<div class="text-center py-8 text-slate-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>Parsing BehaviorTree XML & auditing blackboard...</div>';
+      lucide.createIcons();
+
+      try {
+        const resp = await fetch('/api/bt-analyze', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ xml: xml })
+        });
+        const res = await resp.json();
+
+        document.getElementById('bt-stats-badge').innerText = `${res.stats.nodes} nodes (${res.stats.actions} actions, ${res.stats.controls} controls)`;
+
+        let html = '';
+        if (res.findings && res.findings.length > 0) {
+          html += '<div class="space-y-2 mb-4">';
+          res.findings.forEach(f => {
+            const sevCol = f.severity === 'CRITICAL' ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-300';
+            html += `
+              <div class="p-3 rounded-lg border ${sevCol} text-xs space-y-1">
+                <div class="flex items-center justify-between font-bold">
+                  <span>${escapeHtml(f.title)}</span>
+                  <span class="text-[10px] uppercase px-1.5 py-0.5 rounded bg-black/40">${f.severity}</span>
+                </div>
+                <p class="text-slate-300">${escapeHtml(f.description)}</p>
+                <p class="text-[11px] text-cyan-300 font-semibold">Fix: ${escapeHtml(f.fix)}</p>
+              </div>
+            `;
+          });
+          html += '</div>';
+        } else {
+          html += `
+            <div class="p-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-xs flex items-center gap-2 mb-4">
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+              <span>Tree Verified: No blackboard write contention or infinite retry loops.</span>
+            </div>
+          `;
+        }
+
+        // Render Tree Hierarchy
+        function renderTreeNode(n, indent = 0) {
+          const typeBadge = n.type === 'CONTROL' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-slate-800 text-slate-300 border-slate-700';
+          let itemHtml = `
+            <div class="flex items-center gap-2 py-1 font-mono text-xs" style="margin-left: ${indent * 18}px">
+              <span class="text-slate-500 text-[10px]">└─</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border ${typeBadge}">${n.tag}</span>
+              <span class="text-white font-medium">${escapeHtml(n.name)}</span>
+            </div>
+          `;
+          if (n.children) {
+            n.children.forEach(c => { itemHtml += renderTreeNode(c, indent + 1); });
+          }
+          return itemHtml;
+        }
+
+        if (res.tree_json) {
+          html += '<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-0.5 overflow-x-auto">';
+          html += renderTreeNode(res.tree_json);
+          html += '</div>';
+        }
+
+        out.innerHTML = html;
+        lucide.createIcons();
+      } catch (e) {
+        out.innerHTML = `<div class="text-red-400 text-xs p-4">Audit Failed: ${e}</div>`;
       }
     }
 
