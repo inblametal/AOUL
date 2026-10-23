@@ -101,6 +101,32 @@ class RunawayRobot(Node):
         data = json.loads(response_bytes.decode("utf-8"))
         self.assertIn("custom_drive", data["code"])
 
+    def test_api_chat_handler_non_streaming(self):
+        body = {"message": "Explain ROS 2 QoS", "provider": "offline", "stream": False}
+        handler = self._create_handler("/api/chat", method="POST", body=body)
+        handler._handle_chat(body)
+        response_bytes = handler.wfile.getvalue()
+        data = json.loads(response_bytes.decode("utf-8"))
+        self.assertIn("reply", data)
+        self.assertIn("QoS", data["reply"])
+        self.assertIn("provider", data)
+
+    def test_api_chat_handler_streaming(self):
+        body = {"message": "Explain TF transforms", "provider": "offline", "stream": True}
+        handler = self._create_handler("/api/chat", method="POST", body=body)
+        handler._handle_chat(body)
+        self.assertTrue(getattr(handler, "close_connection", False))
+        stream_output = handler.wfile.getvalue().decode("utf-8")
+        self.assertIn(": heartbeat\n\n", stream_output)
+        self.assertIn("data: [DONE]\n\n", stream_output)
+        self.assertIn("transform", stream_output.lower())
+
+    def test_api_chat_handler_empty_message(self):
+        body = {"message": "", "stream": False}
+        handler = self._create_handler("/api/chat", method="POST", body=body)
+        handler._handle_chat(body)
+        handler.send_response.assert_called_with(400)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -207,27 +207,30 @@ class AnthropicProvider(BaseLLMProvider):
             raise RuntimeError(f"Anthropic API Error ({e.code}): {err_body}")
 
 
-_MODEL_CACHE: Dict[str, Any] = {"models": [], "timestamp": 0.0}
+_MODEL_CACHE: Dict[str, Any] = {"models": [], "timestamp": 0.0, "checked": False}
 
 
-def get_installed_ollama_models(host: str = "http://127.0.0.1:11434") -> List[str]:
+def get_installed_ollama_models(host: str = "http://127.0.0.1:11434", force_refresh: bool = False) -> List[str]:
     """Queries Ollama for list of locally installed model names with 5s caching."""
     import time
     now = time.time()
-    if _MODEL_CACHE["models"] and (now - _MODEL_CACHE["timestamp"] < 5.0):
+    if not force_refresh and _MODEL_CACHE["checked"] and (now - _MODEL_CACHE["timestamp"] < 5.0):
         return _MODEL_CACHE["models"]
 
     try:
         req = urllib.request.Request(f"{host.rstrip('/')}/api/tags", method="GET")
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
-            if models:
-                _MODEL_CACHE["models"] = models
-                _MODEL_CACHE["timestamp"] = now
-            return models or _MODEL_CACHE["models"]
+            _MODEL_CACHE["models"] = models
+            _MODEL_CACHE["timestamp"] = now
+            _MODEL_CACHE["checked"] = True
+            return models
     except Exception:
-        return _MODEL_CACHE["models"]
+        _MODEL_CACHE["models"] = []
+        _MODEL_CACHE["timestamp"] = now
+        _MODEL_CACHE["checked"] = True
+        return []
 
 
 def resolve_best_local_model(host: str = "http://127.0.0.1:11434", requested: Optional[str] = None) -> str:
@@ -342,7 +345,7 @@ class OllamaProvider(BaseLLMProvider):
 
             # Self-healing: if 404 model not found, auto-discover installed models and retry
             if (e.code == 404 or "not found" in err_msg.lower()) and not _retried:
-                installed = get_installed_ollama_models(self.host)
+                installed = get_installed_ollama_models(self.host, force_refresh=True)
                 if installed:
                     best = resolve_best_local_model(self.host)
                     target = best if best != self.model else installed[0]
@@ -416,16 +419,23 @@ class QwenProvider(BaseLLMProvider):
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
 
-        with urllib.request.urlopen(req, timeout=180) as resp:
-            for line in resp:
-                if line:
-                    try:
-                        chunk = json.loads(line.decode("utf-8"))
-                        token = chunk.get("message", {}).get("content", "")
-                        if token:
-                            yield token
-                    except Exception:
-                        continue
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                for line in resp:
+                    if line:
+                        try:
+                            chunk = json.loads(line.decode("utf-8"))
+                            token = chunk.get("message", {}).get("content", "")
+                            if token:
+                                yield token
+                        except Exception:
+                            continue
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            reason = getattr(e, 'reason', e)
+            raise RuntimeError(
+                f"Could not connect to Qwen at {self.endpoint} ({reason}). "
+                f"Ensure Ollama is running (`ollama serve`)."
+            )
 
     def generate(
         self,
@@ -493,7 +503,7 @@ class QwenProvider(BaseLLMProvider):
 
                 # If 404 model not found, auto-switch to installed model and retry
                 if (e.code == 404 or "not found" in err_msg.lower()) and not _retried:
-                    installed = get_installed_ollama_models(self.endpoint)
+                    installed = get_installed_ollama_models(self.endpoint, force_refresh=True)
                     if installed:
                         best = resolve_best_local_model(self.endpoint)
                         target = best if best != self.model else installed[0]

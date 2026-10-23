@@ -4,7 +4,11 @@ Provides a zero-dependency, high-performance local REST & UI server
 using Python's built-in http.server module.
 """
 
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+try:
+    from http.server import ThreadingHTTPServer as ServerClass
+except ImportError:
+    from http.server import HTTPServer as ServerClass
+from http.server import SimpleHTTPRequestHandler
 import json
 import os
 from pathlib import Path
@@ -47,6 +51,14 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self.server.agent_session = AgentSession(provider=self.server.llm_provider)
             self.server.log_analyzer = ROS2LogAnalyzer()
             self.server.loophole_detector = LoopholeDetector()
+
+    def end_headers(self):
+        """Prevent WKWebView and browsers from aggressively caching dynamic assets."""
+        if not getattr(self, "_custom_cache_set", False):
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+        super().end_headers()
 
     def do_OPTIONS(self):
         """Handle CORS pre-flight requests."""
@@ -137,59 +149,67 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     # API Handlers
     # -------------------------------------------------------------
     def _handle_chat(self, body: Dict[str, Any]):
-        message = body.get("message", "").strip()
-        provider_name = body.get("provider") or "qwen"
-        api_key = body.get("api_key")
-        model = body.get("model")
-        stream = body.get("stream", True)
+        try:
+            message = body.get("message", "").strip()
+            provider_name = body.get("provider") or "qwen"
+            api_key = body.get("api_key")
+            model = body.get("model")
+            stream = bool(body.get("stream", False))
 
-        if not message:
-            self._send_json({"error": "Empty message."}, status=400)
-            return
+            if not message:
+                self._send_json({"error": "Empty message."}, status=400)
+                return
 
-        # If user changed provider or credentials, re-instantiate session
-        if provider_name or api_key or model:
-            provider = get_llm_provider(provider_name=provider_name, api_key=api_key, model=model)
-            session = AgentSession(provider=provider)
-        else:
-            session = self.server.agent_session
+            # Re-use or instantiate session
+            if provider_name or api_key or model:
+                provider = get_llm_provider(provider_name=provider_name, api_key=api_key, model=model)
+                session = AgentSession(provider=provider)
+            else:
+                session = self.server.agent_session
 
-        if stream:
-            self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-            self.send_header("Cache-Control", "no-cache, no-transform")
-            self.send_header("Connection", "close")
-            self.send_header("X-Accel-Buffering", "no")
-            self._send_cors_headers()
-            self.end_headers()
+            if stream:
+                self.close_connection = True
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate, no-transform")
+                self.send_header("Connection", "close")
+                self.send_header("X-Accel-Buffering", "no")
+                self._send_cors_headers()
+                self._custom_cache_set = True
+                self.end_headers()
 
-            # Immediate heartbeat so WebKit connects instantly with 0ms latency
-            try:
-                self.wfile.write(b": heartbeat\n\n")
-                self.wfile.flush()
-                for chunk in session.step_stream(message):
-                    data = json.dumps(chunk)
-                    self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
+                # Immediate heartbeat so WebKit connects instantly with 0ms latency
+                try:
+                    self.wfile.write(b": heartbeat\n\n")
                     self.wfile.flush()
-                self.wfile.write(b"data: [DONE]\n\n")
-                self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError, OSError):
-                pass
-            return
+                    for chunk in session.step_stream(message):
+                        data = json.dumps(chunk)
+                        self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
+                        self.wfile.flush()
+                    self.wfile.write(b"data: [DONE]\n\n")
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+                return
 
-        reply = session.step(message)
-        model_name = getattr(session.provider, "model", None)
-        provider_label = (
-            f"Qwen Coder ({model_name})"
-            if "qwen" in session.provider.__class__.__name__.lower()
-            else session.provider.__class__.__name__
-        )
-        self._send_json({
-            "reply": reply,
-            "provider": provider_label,
-            "model": model_name,
-            "history_length": len(session.conversation_history),
-        })
+            reply = session.step(message)
+            model_name = getattr(session.provider, "model", None)
+            provider_label = (
+                f"Qwen Coder ({model_name})"
+                if "qwen" in session.provider.__class__.__name__.lower()
+                else session.provider.__class__.__name__
+            )
+            self._send_json({
+                "reply": reply,
+                "provider": provider_label,
+                "model": model_name,
+                "history_length": len(session.conversation_history),
+            })
+        except Exception as e:
+            try:
+                self._send_json({"error": f"Chat engine error: {str(e)}"}, status=500)
+            except Exception:
+                pass
 
     def _handle_audit(self, body: Dict[str, Any]):
         code = body.get("code")
@@ -674,7 +694,7 @@ def start_server(host: str = "127.0.0.1", port: int = 8765, max_port_attempts: i
     for p in range(port, port + max_port_attempts):
         try:
             server_address = (host, p)
-            httpd = HTTPServer(server_address, RoboSageRequestHandler)
+            httpd = ServerClass(server_address, RoboSageRequestHandler)
             actual_port = p
             break
         except OSError:
@@ -682,7 +702,7 @@ def start_server(host: str = "127.0.0.1", port: int = 8765, max_port_attempts: i
 
     if httpd is None:
         server_address = (host, 0)
-        httpd = HTTPServer(server_address, RoboSageRequestHandler)
+        httpd = ServerClass(server_address, RoboSageRequestHandler)
         actual_port = httpd.server_port
 
     httpd.bound_port = actual_port
