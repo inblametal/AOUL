@@ -352,6 +352,13 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             if turbo and turbo != default_model:
                 threading.Thread(target=warm_up_local_model, args=(endpoint, turbo), daemon=True).start()
 
+        # Detect Cactus Needle 3 availability
+        try:
+            import needle
+            cactus_available = True
+        except Exception:
+            cactus_available = False
+
         self._send_json({
             "ollama_online": len(installed) > 0,
             "installed_models": installed,
@@ -359,6 +366,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             "turbo_model": turbo,
             "default_model": default_model,
             "is_cpu_constrained": is_cpu_constrained,
+            "cactus_needle_available": cactus_available,
             "endpoint": endpoint,
         })
 

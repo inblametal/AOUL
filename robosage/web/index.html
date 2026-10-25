@@ -356,6 +356,7 @@
 
         <select id="model-select" class="bg-slate-800 border border-slate-700 text-emerald-300 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500 font-mono">
           <option value="qwen" selected>⚡ Turbo Fast (Local Qwen - Instant 20 tok/s)</option>
+          <option value="cactus:cactus-needle-3">🌵 Cactus Needle 3 (Edge 35MB Tool Caller)</option>
           <option value="auto">Auto (Smart Fallback)</option>
           <option value="offline">Offline Heuristic Engine (&lt;5ms Instant)</option>
           <option value="gemini">Google Gemini 1.5</option>
@@ -1686,6 +1687,9 @@
       if (selectVal.startsWith('qwen:')) {
         providerName = 'qwen';
         modelName = selectVal.replace('qwen:', '');
+      } else if (selectVal.startsWith('cactus:') || selectVal === 'cactus' || selectVal === 'needle3') {
+        providerName = 'cactus';
+        modelName = 'cactus-needle-3';
       } else if (selectVal === 'qwen') {
         providerName = 'qwen';
         modelName = (window.__turboMode && window.__turboModel) ? window.__turboModel : (window.__bestLocalModel || undefined);
@@ -2322,6 +2326,14 @@
           coderOpt.innerText = `🧠 Deep Coder (${data.best_model}) - High Accuracy`;
           if (!window.__turboMode) coderOpt.selected = true;
           select.appendChild(coderOpt);
+
+          // 2b. Cactus Needle 3 Edge Tool Agent (if available)
+          if (data.cactus_needle_available) {
+            const cactusOpt = document.createElement('option');
+            cactusOpt.value = 'cactus:cactus-needle-3';
+            cactusOpt.innerText = '🌵 Cactus Needle 3 (Edge 35MB Tool Caller)';
+            select.appendChild(cactusOpt);
+          }
 
           // 3. Other installed models
           data.installed_models.forEach(m => {

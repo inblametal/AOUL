@@ -655,7 +655,12 @@ def get_llm_provider(
     """Factory to create appropriate LLM provider with automatic fallback detection."""
     name = (provider_name or os.environ.get("AOUL_LLM_PROVIDER", os.environ.get("ROBOSAGE_LLM_PROVIDER", "auto"))).lower()
 
-    # 1. Direct Qwen Coder / Local selection
+    # 1. Cactus Needle 3 Edge Agent
+    if name in ("cactus", "needle", "needle3", "cactus-needle", "cactus-needle-3") or (model and "needle" in str(model).lower()):
+        from robosage.llm.needle_provider import CactusNeedleProvider
+        return CactusNeedleProvider(model=model or "cactus-needle-3")
+
+    # 2. Direct Qwen Coder / Local selection
     if name in ("qwen", "qwen-coder", "qwencoder", "ollama", "local"):
         return QwenProvider(endpoint=endpoint, model=model)
 

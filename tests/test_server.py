@@ -121,6 +121,15 @@ class RunawayRobot(Node):
         self.assertIn("data: [DONE]\n\n", stream_output)
         self.assertIn("transform", stream_output.lower())
 
+    def test_api_local_models_handler(self):
+        handler = self._create_handler("/api/local-models", method="GET")
+        handler._handle_local_models()
+        response_bytes = handler.wfile.getvalue()
+        data = json.loads(response_bytes.decode("utf-8"))
+        self.assertIn("cactus_needle_available", data)
+        self.assertIn("installed_models", data)
+        self.assertIn("is_cpu_constrained", data)
+
     def test_api_chat_handler_empty_message(self):
         body = {"message": "", "stream": False}
         handler = self._create_handler("/api/chat", method="POST", body=body)
