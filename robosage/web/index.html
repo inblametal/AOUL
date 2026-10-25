@@ -385,41 +385,248 @@
     <div class="flex-1 overflow-hidden relative">
 
       <!-- ========================================== -->
-      <!-- TAB 1: AI COPILOT (CHAT) -->
+      <!-- TAB 1: AI COPILOT (CHAT WITH MEMORY & THREAD SUB-TABS) -->
       <!-- ========================================== -->
-      <section id="tab-chat" class="tab-content h-full flex flex-col p-4 md:p-6">
-        <!-- Chat History -->
-        <div id="chat-box" class="flex-1 overflow-y-auto custom-scroll space-y-4 pr-2 mb-4">
-          <!-- Initial Welcome Message -->
-          <div class="flex gap-3 max-w-3xl">
-            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
-              <i data-lucide="bot" class="w-4 h-4"></i>
+      <section id="tab-chat" class="tab-content h-full flex flex-col p-4 md:p-6 overflow-hidden">
+        
+        <!-- Copilot Sub-Tabs Header Navigation Bar -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3 shrink-0">
+          <div class="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+            <button id="chat-subtab-live-btn" onclick="switchChatSubtab('live')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm cursor-pointer">
+              <i data-lucide="message-square" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Live Chat</span>
+            </button>
+            <button id="chat-subtab-threads-btn" onclick="switchChatSubtab('threads')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Conversation Threads</span>
+              <span id="threads-count-badge" class="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-slate-300 font-mono">1</span>
+            </button>
+            <button id="chat-subtab-memory-btn" onclick="switchChatSubtab('memory')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="brain" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Memory Layer</span>
+              <span id="memory-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </button>
+          </div>
+
+          <!-- Active Thread Pill and Quick Actions -->
+          <div class="flex items-center gap-2 text-xs">
+            <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
+              <span class="text-slate-500 text-[10px] uppercase font-mono">Thread:</span>
+              <span id="active-thread-title-pill" class="font-medium text-cyan-300 max-w-[200px] truncate">Main Robotics Session</span>
             </div>
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm leading-relaxed text-slate-200 shadow-sm">
-              <p class="font-semibold text-cyan-400 mb-1">Hello! I am AOUL, your AI Robotics Copilot.</p>
-              <p class="text-xs text-cyan-300 font-mono mb-2">Actuator • Orientation • Undefined-behavior • Locator</p>
-              <p class="text-slate-300">I specialize in robotics <strong>A</strong>ctuators & motors, 3D <strong>O</strong>rientation & TF kinematics, <strong>U</strong>ndefined-behavior & loophole detection, and state <strong>L</strong>ocalization.</p>
+            <button onclick="createNewThread()" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 transition cursor-pointer font-medium" title="Start a fresh conversation thread">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>New Chat</span>
+            </button>
+            <button onclick="clearCurrentThread()" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-800/50 flex items-center gap-1 transition cursor-pointer" title="Clear current messages">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 1: LIVE CHAT -->
+        <div id="subview-live-chat" class="flex-1 flex flex-col overflow-hidden">
+          <!-- Chat History -->
+          <div id="chat-box" class="flex-1 overflow-y-auto custom-scroll space-y-4 pr-2 mb-4">
+            <!-- Initial Welcome Message -->
+            <div class="flex gap-3 max-w-3xl">
+              <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+              </div>
+              <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm leading-relaxed text-slate-200 shadow-sm">
+                <p class="font-semibold text-cyan-400 mb-1">Hello! I am AOUL, your AI Robotics Copilot.</p>
+                <p class="text-xs text-cyan-300 font-mono mb-2">Actuator • Orientation • Undefined-behavior • Locator</p>
+                <p class="text-slate-300">I specialize in robotics <strong>A</strong>ctuators & motors, 3D <strong>O</strong>rientation & TF kinematics, <strong>U</strong>ndefined-behavior & loophole detection, and state <strong>L</strong>ocalization.</p>
+                
+                <div class="mt-3 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-xs">
+                  <span class="text-slate-400">Quick questions:</span>
+                  <button onclick="quickPrompt('Why do I get TF extrapolation into the future error in ROS 2?')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">TF Extrapolation Fix</button>
+                  <button onclick="quickPrompt('Explain why best_effort publisher does not send data to reliable subscriber.')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">QoS RxO Rules</button>
+                  <button onclick="quickPrompt('What happens if I call service synchronously inside timer callback?')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">Executor Deadlock</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input Form -->
+          <form onsubmit="sendChat(event)" class="relative shrink-0">
+            <textarea id="chat-input" rows="2" placeholder="Ask AOUL a robotics question, paste error logs, or type code snippet... (Press Enter to Send, Shift+Enter for new line)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none custom-scroll font-mono pr-28"></textarea>
+            <div class="absolute right-3 bottom-3 flex items-center gap-2">
+              <button type="submit" id="chat-send-btn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all cursor-pointer" title="Send (Enter key)">
+                <span>Send ↵</span>
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- SUB-VIEW 2: CONVERSATION THREADS -->
+        <div id="subview-threads" class="flex-1 flex flex-col overflow-hidden hidden custom-scroll overflow-y-auto">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <div>
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+                Multi-Turn Conversation Threads
+              </h3>
+              <p class="text-xs text-slate-400">Maintain separate debugging contexts for motor control, kinematics, and QoS issues with full conversation continuation.</p>
+            </div>
+            <button onclick="createNewThread()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-medium flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Start New Thread</span>
+            </button>
+          </div>
+
+          <div id="threads-list-container" class="space-y-3 pb-6">
+            <p class="text-xs text-slate-500 font-mono">Loading conversation threads...</p>
+          </div>
+        </div>
+
+        <!-- SUB-VIEW 3: MEMORY LAYER -->
+        <div id="subview-memory" class="flex-1 flex flex-col overflow-hidden hidden custom-scroll overflow-y-auto">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+            <div>
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                <i data-lucide="brain" class="w-4 h-4 text-emerald-400"></i>
+                Active Robotics Memory Layer
+              </h3>
+              <p class="text-xs text-slate-400">Persistent structured context continuously injected into the AI Copilot. Automatically extracts hardware, ROS distro, parameters, and safety invariants.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="saveMemoryProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                <span>Save Profile</span>
+              </button>
+              <button onclick="resetMemoryLayer()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Reset Defaults</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-6">
+            <!-- 1. Robot Profile Card -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm">
+              <div class="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
+                <h4 class="text-xs font-semibold text-cyan-300 flex items-center gap-1.5 uppercase tracking-wider">
+                  <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  Robot Platform Profile
+                </h4>
+                <span class="text-[10px] font-mono text-slate-500">Auto-extracted from chat</span>
+              </div>
+              <div class="space-y-3 text-xs">
+                <div>
+                  <label class="block text-slate-400 mb-1">Platform Name</label>
+                  <input type="text" id="memory-robot-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-slate-400 mb-1">Kinematic Platform</label>
+                    <select id="memory-platform-type" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-xs">
+                      <option value="Differential Drive (2WD)">Differential Drive (2WD)</option>
+                      <option value="Ackermann Steering">Ackermann Steering</option>
+                      <option value="Omnidirectional (Mecanum)">Omnidirectional (Mecanum)</option>
+                      <option value="Robotic Manipulator / Arm">Robotic Manipulator / Arm</option>
+                      <option value="Legged / Quadruped">Legged / Quadruped</option>
+                      <option value="Custom Mobile Base">Custom Mobile Base</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">ROS Distro</label>
+                    <select id="memory-ros-distro" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white text-xs">
+                      <option value="ROS 2 Jazzy">ROS 2 Jazzy (2024 LTS)</option>
+                      <option value="ROS 2 Humble">ROS 2 Humble (2022 LTS)</option>
+                      <option value="ROS 2 Iron">ROS 2 Iron</option>
+                      <option value="ROS 2 Rolling">ROS 2 Rolling</option>
+                      <option value="ROS 1 Noetic">ROS 1 Noetic</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">RMW Implementation</label>
+                  <input type="text" id="memory-rmw-impl" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-cyan-300 font-mono text-xs">
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">Sensors & Perception Topics</label>
+                  <div id="memory-sensors-list" class="space-y-1 bg-slate-800/50 p-2 rounded-lg border border-slate-700/60 font-mono text-[11px] text-slate-300">
+                    <span>Loading...</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">Actuators & Drive Topics</label>
+                  <div id="memory-actuators-list" class="space-y-1 bg-slate-800/50 p-2 rounded-lg border border-slate-700/60 font-mono text-[11px] text-slate-300">
+                    <span>Loading...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Working Parameters Card -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm flex flex-col">
+              <div class="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
+                <h4 class="text-xs font-semibold text-emerald-300 flex items-center gap-1.5 uppercase tracking-wider">
+                  <i data-lucide="sliders" class="w-3.5 h-3.5 text-emerald-400"></i>
+                  Working Parameters & Limits
+                </h4>
+                <span class="text-[10px] font-mono text-emerald-400">Context Key-Values</span>
+              </div>
               
-              <div class="mt-3 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-xs">
-                <span class="text-slate-400">Quick questions:</span>
-                <button onclick="quickPrompt('Why do I get TF extrapolation into the future error in ROS 2?')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">TF Extrapolation Fix</button>
-                <button onclick="quickPrompt('Explain why best_effort publisher does not send data to reliable subscriber.')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">QoS RxO Rules</button>
-                <button onclick="quickPrompt('What happens if I call service synchronously inside timer callback?')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">Executor Deadlock</button>
+              <div class="flex-1 overflow-y-auto custom-scroll mb-3">
+                <table class="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr class="text-slate-500 border-b border-slate-800 text-[10px] uppercase">
+                      <th class="py-1">Parameter Key</th>
+                      <th class="py-1">Value</th>
+                      <th class="py-1 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="memory-parameters-tbody" class="divide-y divide-slate-800/50 text-slate-200">
+                    <tr><td colspan="3" class="py-2 text-slate-500">Loading parameters...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Add Param Row -->
+              <div class="flex gap-2 pt-2 border-t border-slate-800 text-xs">
+                <input type="text" id="new-param-key" placeholder="param_name" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs">
+                <input type="text" id="new-param-val" placeholder="value" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs">
+                <button onclick="addMemoryParam()" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/40 cursor-pointer font-medium">Add</button>
+              </div>
+            </div>
+
+            <!-- 3. Safety Invariants Card -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm">
+              <div class="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
+                <h4 class="text-xs font-semibold text-amber-300 flex items-center gap-1.5 uppercase tracking-wider">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-400"></i>
+                  Enforced Safety Constraints
+                </h4>
+                <span class="text-[10px] font-mono text-amber-400">Injected Invariants</span>
+              </div>
+              <ul id="memory-constraints-list" class="space-y-2 text-xs text-slate-300 mb-3">
+                <li class="text-slate-500 font-mono">Loading constraints...</li>
+              </ul>
+              <div class="flex gap-2 text-xs pt-2 border-t border-slate-800">
+                <input type="text" id="new-constraint-input" placeholder="e.g. Disallow reverse speed > 0.5 m/s" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs">
+                <button onclick="addSafetyConstraint()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 cursor-pointer font-medium">Add Rule</button>
+              </div>
+            </div>
+
+            <!-- 4. Discovered Issues Card -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-sm">
+              <div class="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
+                <h4 class="text-xs font-semibold text-rose-300 flex items-center gap-1.5 uppercase tracking-wider">
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i>
+                  Discovered Session Issues
+                </h4>
+                <span id="memory-issues-count-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-rose-950/60 text-rose-300 font-mono border border-rose-800/50">0 Detected</span>
+              </div>
+              <div id="memory-issues-list" class="space-y-2 text-xs">
+                <p class="text-slate-500 font-mono">No safety loopholes or crashes detected in this session yet.</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Chat Input Form -->
-        <form onsubmit="sendChat(event)" class="relative shrink-0">
-          <textarea id="chat-input" rows="2" placeholder="Ask AOUL a robotics question, paste error logs, or type code snippet... (Press Enter to Send, Shift+Enter for new line)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 resize-none custom-scroll font-mono pr-28"></textarea>
-          <div class="absolute right-3 bottom-3 flex items-center gap-2">
-            <button type="submit" id="chat-send-btn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all" title="Send (Enter key)">
-              <span>Send ↵</span>
-              <i data-lucide="send" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        </form>
       </section>
 
       <!-- ========================================== -->
@@ -1711,6 +1918,7 @@
             provider: providerName,
             model: modelName,
             api_key: apiKey,
+            thread_id: window.__activeThreadId || undefined,
             stream: true
           })
         });
@@ -1767,6 +1975,8 @@
                 try {
                   const event = JSON.parse(trimmed.slice(6));
                   if (event.model) activeModel = event.model;
+                  if (event.thread_id) window.__activeThreadId = event.thread_id;
+                  if (event.thread_title) updateActiveThreadPill(event.thread_title);
 
                   if (event.token || event.type === 'token') {
                     const token = event.token || '';
@@ -1849,6 +2059,7 @@
               provider: providerName,
               model: modelName,
               api_key: apiKey,
+              thread_id: window.__activeThreadId || undefined,
               stream: false
             })
           });
@@ -1941,6 +2152,465 @@
       box.appendChild(msgDiv);
       box.scrollTop = box.scrollHeight;
       lucide.createIcons();
+    }
+
+    // ==========================================
+    // AI COPILOT SUB-TABS, THREADS & MEMORY LAYER
+    // ==========================================
+    window.__activeThreadId = 'default_thread';
+
+    function switchChatSubtab(subtab) {
+      const liveView = document.getElementById('subview-live-chat');
+      const threadsView = document.getElementById('subview-threads');
+      const memoryView = document.getElementById('subview-memory');
+
+      const liveBtn = document.getElementById('chat-subtab-live-btn');
+      const threadsBtn = document.getElementById('chat-subtab-threads-btn');
+      const memoryBtn = document.getElementById('chat-subtab-memory-btn');
+
+      const defaultBtnClass = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer";
+      const activeBtnClass = "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm cursor-pointer";
+
+      if (liveBtn) liveBtn.className = defaultBtnClass;
+      if (threadsBtn) threadsBtn.className = defaultBtnClass;
+      if (memoryBtn) memoryBtn.className = defaultBtnClass;
+
+      if (liveView) liveView.classList.add('hidden');
+      if (threadsView) threadsView.classList.add('hidden');
+      if (memoryView) memoryView.classList.add('hidden');
+
+      if (subtab === 'live') {
+        if (liveView) liveView.classList.remove('hidden');
+        if (liveBtn) liveBtn.className = activeBtnClass;
+      } else if (subtab === 'threads') {
+        if (threadsView) threadsView.classList.remove('hidden');
+        if (threadsBtn) threadsBtn.className = activeBtnClass;
+        loadConversationThreads();
+      } else if (subtab === 'memory') {
+        if (memoryView) memoryView.classList.remove('hidden');
+        if (memoryBtn) memoryBtn.className = activeBtnClass;
+        loadMemoryLayer();
+      }
+      lucide.createIcons();
+    }
+
+    function updateActiveThreadPill(title) {
+      const pill = document.getElementById('active-thread-title-pill');
+      if (pill && title) {
+        pill.innerText = title;
+        pill.title = title;
+      }
+    }
+
+    async function loadConversationThreads(renderIfOpen = true) {
+      try {
+        const resp = await fetch('/api/threads');
+        const data = await resp.json();
+        const threads = data.threads || [];
+        window.__activeThreadId = data.active_thread_id || window.__activeThreadId;
+
+        const badge = document.getElementById('threads-count-badge');
+        if (badge) badge.innerText = threads.length;
+
+        const activeT = threads.find(t => t.id === window.__activeThreadId);
+        if (activeT) updateActiveThreadPill(activeT.title);
+
+        const container = document.getElementById('threads-list-container');
+        if (!container || !renderIfOpen) return;
+
+        if (threads.length === 0) {
+          container.innerHTML = '<p class="text-xs text-slate-500 font-mono">No conversation threads found. Click "+ Start New Thread" to create one.</p>';
+          return;
+        }
+
+        container.innerHTML = threads.map(t => {
+          const isActive = (t.id === window.__activeThreadId);
+          const timeAgo = formatTimeAgo(t.updated_at);
+          return `
+            <div class="p-3.5 rounded-xl border ${isActive ? 'bg-cyan-950/20 border-cyan-500/50 shadow-md shadow-cyan-950/30' : 'bg-slate-900 border-slate-800 hover:border-slate-700'} transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold text-xs ${isActive ? 'text-cyan-300' : 'text-slate-200'} truncate">${escapeHtml(t.title)}</span>
+                  ${isActive ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Active</span>' : ''}
+                </div>
+                <div class="text-[11px] text-slate-400 truncate mb-1">
+                  ${escapeHtml(t.preview || 'No messages yet')}
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-mono text-slate-500">
+                  <span>${t.turn_count} messages</span>
+                  <span>·</span>
+                  <span>Updated ${timeAgo}</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5 shrink-0 text-xs">
+                ${!isActive ? `
+                  <button onclick="switchThread('${t.id}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 transition cursor-pointer">
+                    <i data-lucide="play" class="w-3 h-3"></i>
+                    <span>Switch</span>
+                  </button>
+                ` : `
+                  <button onclick="switchChatSubtab('live')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition cursor-pointer">
+                    <i data-lucide="message-square" class="w-3 h-3 text-cyan-400"></i>
+                    <span>Open Chat</span>
+                  </button>
+                `}
+                <button onclick="renameThreadPrompt('${t.id}', '${escapeHtml(t.title)}')" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 transition cursor-pointer" title="Rename Thread">
+                  <i data-lucide="edit-3" class="w-3 h-3"></i>
+                </button>
+                <button onclick="deleteThreadConfirm('${t.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-800/40 transition cursor-pointer" title="Delete Thread">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        lucide.createIcons();
+      } catch (err) {
+        console.warn('Failed to load threads:', err);
+      }
+    }
+
+    async function createNewThread() {
+      try {
+        const title = prompt('Enter a name for the new conversation thread:', 'Robotics Session ' + (new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})));
+        if (title === null) return;
+        const resp = await fetch('/api/threads', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'create', title: title.trim() || 'New Conversation' })
+        });
+        const data = await resp.json();
+        if (data.thread) {
+          window.__activeThreadId = data.thread.id;
+          updateActiveThreadPill(data.thread.title);
+          renderThreadMessages(data.thread);
+          switchChatSubtab('live');
+          loadConversationThreads(false);
+        }
+      } catch (err) {
+        alert('Failed to create thread: ' + err);
+      }
+    }
+
+    async function switchThread(threadId) {
+      try {
+        const resp = await fetch('/api/threads', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'switch', thread_id: threadId })
+        });
+        const data = await resp.json();
+        if (data.thread) {
+          window.__activeThreadId = data.thread.id;
+          updateActiveThreadPill(data.thread.title);
+          renderThreadMessages(data.thread);
+          switchChatSubtab('live');
+          loadConversationThreads(false);
+        }
+      } catch (err) {
+        alert('Failed to switch thread: ' + err);
+      }
+    }
+
+    async function renameThreadPrompt(threadId, currentTitle) {
+      const newTitle = prompt('Enter new thread title:', currentTitle);
+      if (!newTitle || newTitle.trim() === currentTitle) return;
+      try {
+        await fetch('/api/threads', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'rename', thread_id: threadId, title: newTitle.trim() })
+        });
+        if (threadId === window.__activeThreadId) updateActiveThreadPill(newTitle.trim());
+        loadConversationThreads();
+      } catch (err) {
+        alert('Failed to rename thread: ' + err);
+      }
+    }
+
+    async function deleteThreadConfirm(threadId) {
+      if (!confirm('Are you sure you want to delete this conversation thread?')) return;
+      try {
+        const resp = await fetch('/api/threads', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'delete', thread_id: threadId })
+        });
+        const data = await resp.json();
+        if (data.active_thread_id) {
+          window.__activeThreadId = data.active_thread_id;
+          switchThread(data.active_thread_id);
+        }
+        loadConversationThreads();
+      } catch (err) {
+        alert('Failed to delete thread: ' + err);
+      }
+    }
+
+    async function clearCurrentThread() {
+      if (!confirm('Clear all messages in the active thread?')) return;
+      try {
+        await fetch('/api/threads', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'clear', thread_id: window.__activeThreadId })
+        });
+        const box = document.getElementById('chat-box');
+        if (box) {
+          box.innerHTML = getWelcomeMessageHtml();
+          lucide.createIcons();
+        }
+        loadConversationThreads(false);
+      } catch (err) {
+        alert('Failed to clear thread: ' + err);
+      }
+    }
+
+    function renderThreadMessages(thread) {
+      const box = document.getElementById('chat-box');
+      if (!box) return;
+      box.innerHTML = '';
+
+      if (!thread.messages || thread.messages.length === 0) {
+        box.innerHTML = getWelcomeMessageHtml();
+      } else {
+        thread.messages.forEach(msg => {
+          appendChatMessage(msg.role, msg.content, msg.role === 'assistant' ? 'AOUL Copilot' : null);
+        });
+      }
+      box.scrollTop = box.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function getWelcomeMessageHtml() {
+      return `
+        <div class="flex gap-3 max-w-3xl">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm leading-relaxed text-slate-200 shadow-sm">
+            <p class="font-semibold text-cyan-400 mb-1">Hello! I am AOUL, your AI Robotics Copilot.</p>
+            <p class="text-xs text-cyan-300 font-mono mb-2">Actuator • Orientation • Undefined-behavior • Locator</p>
+            <p class="text-slate-300">I specialize in robotics <strong>A</strong>ctuators & motors, 3D <strong>O</strong>rientation & TF kinematics, <strong>U</strong>ndefined-behavior & loophole detection, and state <strong>L</strong>ocalization.</p>
+            
+            <div class="mt-3 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-xs">
+              <span class="text-slate-400">Quick questions:</span>
+              <button onclick="quickPrompt('Why do I get TF extrapolation into the future error in ROS 2?')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">TF Extrapolation Fix</button>
+              <button onclick="quickPrompt('Explain why best_effort publisher does not send data to reliable subscriber.')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">QoS RxO Rules</button>
+              <button onclick="quickPrompt('What happens if I call service synchronously inside timer callback?')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md text-cyan-300 border border-slate-700 transition">Executor Deadlock</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function formatTimeAgo(timestamp) {
+      if (!timestamp) return 'just now';
+      const seconds = Math.floor((Date.now() - timestamp * 1000) / 1000);
+      if (seconds < 60) return 'just now';
+      const mins = Math.floor(seconds / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return `${Math.floor(hrs / 24)}d ago`;
+    }
+
+    // ==========================================
+    // MEMORY LAYER OPERATIONS
+    // ==========================================
+    async function loadMemoryLayer() {
+      try {
+        const resp = await fetch('/api/memory');
+        const data = await resp.json();
+        
+        // Robot Profile
+        const rp = data.robot_profile || {};
+        const nameInput = document.getElementById('memory-robot-name');
+        const platformSelect = document.getElementById('memory-platform-type');
+        const distroSelect = document.getElementById('memory-ros-distro');
+        const rmwInput = document.getElementById('memory-rmw-impl');
+
+        if (nameInput) nameInput.value = rp.name || 'AOUL Mobile Platform';
+        if (platformSelect && rp.platform_type) platformSelect.value = rp.platform_type;
+        if (distroSelect && rp.ros_distro) distroSelect.value = rp.ros_distro;
+        if (rmwInput) rmwInput.value = rp.rmw_implementation || 'rmw_cyclonedds_cpp';
+
+        // Sensors
+        const sensorsList = document.getElementById('memory-sensors-list');
+        if (sensorsList) {
+          const sensors = rp.sensors || [];
+          sensorsList.innerHTML = sensors.length ? sensors.map(s => `<div class="truncate text-cyan-200">📡 ${escapeHtml(s)}</div>`).join('') : '<span class="text-slate-500">None registered</span>';
+        }
+
+        // Actuators
+        const actuatorsList = document.getElementById('memory-actuators-list');
+        if (actuatorsList) {
+          const actuators = rp.actuators || [];
+          actuatorsList.innerHTML = actuators.length ? actuators.map(a => `<div class="truncate text-amber-200">⚙️ ${escapeHtml(a)}</div>`).join('') : '<span class="text-slate-500">None registered</span>';
+        }
+
+        // Parameters
+        const paramsTbody = document.getElementById('memory-parameters-tbody');
+        if (paramsTbody) {
+          const params = data.working_parameters || {};
+          const keys = Object.keys(params);
+          if (keys.length === 0) {
+            paramsTbody.innerHTML = '<tr><td colspan="3" class="py-2 text-slate-500">No working parameters stored.</td></tr>';
+          } else {
+            paramsTbody.innerHTML = keys.map(k => `
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-1.5 text-cyan-300 font-mono">${escapeHtml(k)}</td>
+                <td class="py-1.5 text-slate-200 font-mono">${escapeHtml(params[k])}</td>
+                <td class="py-1.5 text-right">
+                  <button onclick="deleteMemoryParam('${escapeHtml(k)}')" class="text-rose-400 hover:text-rose-300 text-[10px] cursor-pointer">Delete</button>
+                </td>
+              </tr>
+            `).join('');
+          }
+        }
+
+        // Constraints
+        const constraintsList = document.getElementById('memory-constraints-list');
+        if (constraintsList) {
+          const constraints = data.safety_constraints || [];
+          constraintsList.innerHTML = constraints.map(c => `
+            <li class="flex items-start gap-1.5 text-slate-200">
+              <span class="text-amber-400 mt-0.5">•</span>
+              <span class="flex-1">${escapeHtml(c)}</span>
+            </li>
+          `).join('');
+        }
+
+        // Discovered Issues
+        const issuesContainer = document.getElementById('memory-issues-list');
+        const issuesBadge = document.getElementById('memory-issues-count-badge');
+        const issues = data.discovered_issues || [];
+        if (issuesBadge) issuesBadge.innerText = `${issues.length} Detected`;
+        if (issuesContainer) {
+          if (issues.length === 0) {
+            issuesContainer.innerHTML = '<p class="text-slate-500 font-mono">No safety loopholes or crashes detected in this session yet.</p>';
+          } else {
+            issuesContainer.innerHTML = issues.map(iss => `
+              <div class="p-2.5 rounded-lg bg-rose-950/20 border border-rose-800/40 space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-rose-300 text-xs">${escapeHtml(iss.title)}</span>
+                  <span class="text-[9px] font-mono text-rose-400 uppercase bg-rose-900/40 px-1.5 py-0.5 rounded">${escapeHtml(iss.severity || 'WARNING')}</span>
+                </div>
+                ${iss.file_path ? `<div class="text-[10px] font-mono text-slate-400">${escapeHtml(iss.file_path)}</div>` : ''}
+                ${iss.fix ? `<div class="text-[11px] text-slate-300">💡 Fix: ${escapeHtml(iss.fix)}</div>` : ''}
+              </div>
+            `).join('');
+          }
+        }
+
+      } catch (err) {
+        console.warn('Failed to load memory layer:', err);
+      }
+    }
+
+    async function saveMemoryProfile() {
+      const name = document.getElementById('memory-robot-name').value.trim();
+      const platform = document.getElementById('memory-platform-type').value;
+      const distro = document.getElementById('memory-ros-distro').value;
+      const rmw = document.getElementById('memory-rmw-impl').value.trim();
+
+      try {
+        const resp = await fetch('/api/memory', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            action: 'update',
+            data: {
+              robot_profile: {
+                name: name,
+                platform_type: platform,
+                ros_distro: distro,
+                rmw_implementation: rmw
+              }
+            }
+          })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          alert('Robot Profile saved to Memory Layer successfully!');
+          loadMemoryLayer();
+        }
+      } catch (err) {
+        alert('Failed to save profile: ' + err);
+      }
+    }
+
+    async function addMemoryParam() {
+      const k = document.getElementById('new-param-key').value.trim();
+      const v = document.getElementById('new-param-val').value.trim();
+      if (!k || !v) {
+        alert('Please enter both parameter name and value.');
+        return;
+      }
+      try {
+        await fetch('/api/memory', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'add_param', key: k, value: v })
+        });
+        document.getElementById('new-param-key').value = '';
+        document.getElementById('new-param-val').value = '';
+        loadMemoryLayer();
+      } catch (err) {
+        alert('Failed to add parameter: ' + err);
+      }
+    }
+
+    async function deleteMemoryParam(key) {
+      try {
+        await fetch('/api/memory', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'delete_param', key: key })
+        });
+        loadMemoryLayer();
+      } catch (err) {
+        alert('Failed to delete parameter: ' + err);
+      }
+    }
+
+    async function addSafetyConstraint() {
+      const input = document.getElementById('new-constraint-input');
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        const curResp = await fetch('/api/memory');
+        const curData = await curResp.json();
+        const constraints = curData.safety_constraints || [];
+        constraints.push(text);
+        await fetch('/api/memory', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            action: 'update',
+            data: { safety_constraints: constraints }
+          })
+        });
+        input.value = '';
+        loadMemoryLayer();
+      } catch (err) {
+        alert('Failed to add constraint: ' + err);
+      }
+    }
+
+    async function resetMemoryLayer() {
+      if (!confirm('Reset memory layer to default robotics parameters?')) return;
+      try {
+        await fetch('/api/memory', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'reset' })
+        });
+        loadMemoryLayer();
+      } catch (err) {
+        alert('Failed to reset memory layer: ' + err);
+      }
     }
 
     // ==========================================
@@ -3444,9 +4114,11 @@
     const savedTheme = localStorage.getItem('aoul_theme') || 'cyber';
     changeTheme(savedTheme);
 
-    // Initialize doctor and models on startup
+    // Initialize doctor, models, threads, and memory on startup
     loadDoctorReport();
     loadLocalModels();
+    loadConversationThreads(false);
+    loadMemoryLayer();
   </script>
 </body>
 </html>

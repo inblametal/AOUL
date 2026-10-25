@@ -79,6 +79,14 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_doctor()
             return
 
+        if path == "/api/threads":
+            self._handle_get_threads()
+            return
+
+        if path == "/api/memory":
+            self._handle_get_memory()
+            return
+
         if path == "/api/local-models":
             self._handle_local_models()
             return
@@ -117,6 +125,10 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/chat":
             self._handle_chat(body)
+        elif path == "/api/threads":
+            self._handle_post_threads(body)
+        elif path == "/api/memory":
+            self._handle_post_memory(body)
         elif path == "/api/audit":
             self._handle_audit(body)
         elif path == "/api/triage":
@@ -149,24 +161,123 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     # -------------------------------------------------------------
     # API Handlers
     # -------------------------------------------------------------
+    def _handle_get_threads(self):
+        session = getattr(self.server, "agent_session", None)
+        if not session:
+            self._send_json({"threads": [], "active_thread_id": "default_thread"})
+            return
+        self._send_json({
+            "threads": session.conversation_manager.list_threads(),
+            "active_thread_id": session.conversation_manager.active_thread_id,
+        })
+
+    def _handle_post_threads(self, body: Dict[str, Any]):
+        session = getattr(self.server, "agent_session", None)
+        if not session:
+            self._send_json({"error": "No active session"}, status=500)
+            return
+
+        action = body.get("action", "list")
+        mgr = session.conversation_manager
+
+        if action == "create":
+            title = body.get("title", "New Conversation")
+            thread = mgr.create_thread(title)
+            self._send_json({"thread": thread.to_dict(), "active_thread_id": thread.id, "threads": mgr.list_threads()})
+        elif action == "switch":
+            thread_id = body.get("thread_id")
+            thread = mgr.switch_thread(thread_id)
+            if thread:
+                self._send_json({"thread": thread.to_dict(), "active_thread_id": thread.id, "threads": mgr.list_threads()})
+            else:
+                self._send_json({"error": "Thread not found"}, status=404)
+        elif action == "get":
+            thread_id = body.get("thread_id") or mgr.active_thread_id
+            thread = mgr.threads.get(thread_id)
+            if thread:
+                self._send_json({"thread": thread.to_dict(), "active_thread_id": thread.id})
+            else:
+                self._send_json({"error": "Thread not found"}, status=404)
+        elif action == "rename":
+            thread_id = body.get("thread_id")
+            new_title = body.get("title", "Untitled")
+            success = mgr.rename_thread(thread_id, new_title)
+            self._send_json({"success": success, "threads": mgr.list_threads()})
+        elif action == "delete":
+            thread_id = body.get("thread_id")
+            success = mgr.delete_thread(thread_id)
+            self._send_json({"success": success, "threads": mgr.list_threads(), "active_thread_id": mgr.active_thread_id})
+        elif action == "clear":
+            thread_id = body.get("thread_id") or mgr.active_thread_id
+            success = mgr.clear_thread(thread_id)
+            self._send_json({"success": success, "active_thread_id": mgr.active_thread_id})
+        else:
+            self._send_json({"threads": mgr.list_threads(), "active_thread_id": mgr.active_thread_id})
+
+    def _handle_get_memory(self):
+        session = getattr(self.server, "agent_session", None)
+        if not session:
+            from robosage.agent.memory import RoboticsMemoryLayer
+            self._send_json(RoboticsMemoryLayer().to_dict())
+            return
+        self._send_json(session.conversation_manager.memory_layer.to_dict())
+
+    def _handle_post_memory(self, body: Dict[str, Any]):
+        session = getattr(self.server, "agent_session", None)
+        if not session:
+            self._send_json({"error": "No active session"}, status=500)
+            return
+
+        mem = session.conversation_manager.memory_layer
+        action = body.get("action", "update")
+
+        if action == "update":
+            mem.update_from_dict(body.get("data", {}))
+            self._send_json({"success": True, "memory": mem.to_dict()})
+        elif action == "add_param":
+            k = str(body.get("key", "")).strip()
+            v = str(body.get("value", "")).strip()
+            if k:
+                mem.working_parameters[k] = v
+            self._send_json({"success": True, "memory": mem.to_dict()})
+        elif action == "delete_param":
+            k = str(body.get("key", "")).strip()
+            if k in mem.working_parameters:
+                del mem.working_parameters[k]
+            self._send_json({"success": True, "memory": mem.to_dict()})
+        elif action == "reset":
+            from robosage.agent.memory import RoboticsMemoryLayer
+            session.conversation_manager.memory_layer = RoboticsMemoryLayer()
+            self._send_json({"success": True, "memory": session.conversation_manager.memory_layer.to_dict()})
+        else:
+            self._send_json({"error": f"Unknown memory action '{action}'"}, status=400)
+
     def _handle_chat(self, body: Dict[str, Any]):
         try:
             message = body.get("message", "").strip()
             provider_name = body.get("provider") or "qwen"
             api_key = body.get("api_key")
             model = body.get("model")
+            thread_id = body.get("thread_id")
             stream = bool(body.get("stream", False))
 
             if not message:
                 self._send_json({"error": "Empty message."}, status=400)
                 return
 
-            # Re-use or instantiate session
-            if provider_name or api_key or model:
+            # Maintain session singleton with dynamic provider updates so conversation continuation is preserved
+            session = getattr(self.server, "agent_session", None)
+            if session is None:
                 provider = get_llm_provider(provider_name=provider_name, api_key=api_key, model=model)
                 session = AgentSession(provider=provider)
-            else:
-                session = self.server.agent_session
+                self.server.agent_session = session
+            elif provider_name or api_key or model:
+                try:
+                    session.provider = get_llm_provider(provider_name=provider_name, api_key=api_key, model=model)
+                except Exception:
+                    pass
+
+            target_thread = session.conversation_manager.get_or_create_thread(thread_id)
 
             if stream:
                 self.close_connection = True
@@ -183,7 +294,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
                 try:
                     self.wfile.write(b": heartbeat\n\n")
                     self.wfile.flush()
-                    for chunk in session.step_stream(message):
+                    for chunk in session.step_stream(message, thread_id=target_thread.id):
                         data = json.dumps(chunk)
                         self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
                         self.wfile.flush()
@@ -193,7 +304,7 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
                     pass
                 return
 
-            reply = session.step(message)
+            reply = session.step(message, thread_id=target_thread.id)
             model_name = getattr(session.provider, "model", None)
             provider_label = (
                 f"Qwen Coder ({model_name})"
@@ -203,6 +314,10 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({
                 "reply": reply,
                 "provider": provider_label,
+                "thread_id": target_thread.id,
+                "thread_title": target_thread.title,
+                "turn_count": len(target_thread.messages),
+                "memory_summary": session.conversation_manager.memory_layer.robot_profile.platform_type,
                 "model": model_name,
                 "history_length": len(session.conversation_history),
             })

@@ -130,6 +130,38 @@ class RunawayRobot(Node):
         self.assertIn("installed_models", data)
         self.assertIn("is_cpu_constrained", data)
 
+    def test_api_threads_get_and_post(self):
+        # 1. GET threads
+        handler = self._create_handler("/api/threads", method="GET")
+        handler._handle_get_threads()
+        data = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertIn("threads", data)
+        self.assertIn("active_thread_id", data)
+
+        # 2. POST create thread
+        body = {"action": "create", "title": "Safety E-Stop Verification"}
+        handler2 = self._create_handler("/api/threads", method="POST", body=body)
+        handler2._handle_post_threads(body)
+        data2 = json.loads(handler2.wfile.getvalue().decode("utf-8"))
+        self.assertIn("thread", data2)
+        self.assertEqual(data2["thread"]["title"], "Safety E-Stop Verification")
+
+    def test_api_memory_get_and_post(self):
+        # 1. GET memory
+        handler = self._create_handler("/api/memory", method="GET")
+        handler._handle_get_memory()
+        data = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertIn("robot_profile", data)
+        self.assertIn("working_parameters", data)
+
+        # 2. POST add_param
+        body = {"action": "add_param", "key": "wheel_base", "value": "0.55m"}
+        handler2 = self._create_handler("/api/memory", method="POST", body=body)
+        handler2._handle_post_memory(body)
+        data2 = json.loads(handler2.wfile.getvalue().decode("utf-8"))
+        self.assertTrue(data2["success"])
+        self.assertEqual(data2["memory"]["working_parameters"]["wheel_base"], "0.55m")
+
     def test_api_chat_handler_empty_message(self):
         body = {"message": "", "stream": False}
         handler = self._create_handler("/api/chat", method="POST", body=body)

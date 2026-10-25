@@ -436,9 +436,12 @@ class QwenProvider(BaseLLMProvider):
                 "num_thread": cpu_threads,
                 "num_ctx": 2048,
                 "num_predict": 1024,
-                "temperature": 0.2,
+                "temperature": 0.4,
                 "top_k": 40,
                 "top_p": 0.9,
+                "repeat_penalty": 1.18,
+                "repeat_last_n": 128,
+                "presence_penalty": 0.2,
             }
         }
         data = json.dumps(payload).encode("utf-8")
@@ -514,9 +517,12 @@ class QwenProvider(BaseLLMProvider):
                     "num_thread": cpu_threads,
                     "num_ctx": 2048,
                     "num_predict": 1024,
-                    "temperature": 0.2,
+                    "temperature": 0.4,
                     "top_k": 40,
                     "top_p": 0.9,
+                    "repeat_penalty": 1.18,
+                    "repeat_last_n": 128,
+                    "presence_penalty": 0.2,
                 }
             }
             data = json.dumps(payload).encode("utf-8")
