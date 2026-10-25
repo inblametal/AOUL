@@ -41,6 +41,7 @@ EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
 class RoboSageRequestHandler(SimpleHTTPRequestHandler):
     """Custom request handler dispatching REST APIs and serving UI assets."""
+    disable_nagle_algorithm = True
     protocol_version = "HTTP/1.1"
 
     def setup(self):
@@ -328,20 +329,36 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
         })
 
     def _handle_local_models(self):
+        import platform
         import threading
-        from robosage.llm.provider import get_installed_ollama_models, resolve_best_local_model, warm_up_local_model
+        from robosage.llm.provider import (
+            get_installed_ollama_models,
+            resolve_best_local_model,
+            resolve_turbo_model,
+            warm_up_local_model,
+        )
         endpoint = os.environ.get("QWEN_ENDPOINT", "http://127.0.0.1:11434")
         installed = get_installed_ollama_models(endpoint)
         best = resolve_best_local_model(endpoint) if installed else "qwen2.5-coder:latest"
+        turbo = resolve_turbo_model(endpoint) if installed else None
 
-        # Pre-warm Qwen Coder in background so first user prompt is instant
+        # Detect Intel Mac or CPU-constrained machines where 7B+ models swap heavily
+        is_cpu_constrained = (sys.platform == "darwin" and platform.machine() in ("x86_64", "i386")) or (os.cpu_count() or 4) <= 4
+        default_model = (turbo or best) if is_cpu_constrained else best
+
+        # Pre-warm local models in background so user's first prompt executes with 0ms cold-start
         if installed:
-            threading.Thread(target=warm_up_local_model, args=(endpoint, best), daemon=True).start()
+            threading.Thread(target=warm_up_local_model, args=(endpoint, default_model), daemon=True).start()
+            if turbo and turbo != default_model:
+                threading.Thread(target=warm_up_local_model, args=(endpoint, turbo), daemon=True).start()
 
         self._send_json({
             "ollama_online": len(installed) > 0,
             "installed_models": installed,
             "best_model": best,
+            "turbo_model": turbo,
+            "default_model": default_model,
+            "is_cpu_constrained": is_cpu_constrained,
             "endpoint": endpoint,
         })
 

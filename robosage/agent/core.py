@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 import os
 from typing import Dict, List, Optional
 
-from robosage.agent.prompts import ROBOTICS_AGENT_SYSTEM_PROMPT
+from robosage.agent.prompts import ROBOTICS_AGENT_SYSTEM_PROMPT, ROBOTICS_FAST_CHAT_PROMPT
 from robosage.agent.tools import RoboticsToolRegistry
 from robosage.llm.provider import BaseLLMProvider, ChatMessage, LLMResponse, get_llm_provider
 
@@ -36,11 +36,14 @@ class AgentSession:
                 f"Please synthesize this diagnostic finding, explain the physics/concurrency cause, and provide a clean solution."
             )
 
-        # 3. Call LLM provider
+        # 3. Call LLM provider with optimized fast prompt for conversational turns
+        is_short_turn = len(user_input.strip()) < 120 and not pre_tool_context and "refactor" not in user_input.lower()
+        effective_sys = ROBOTICS_FAST_CHAT_PROMPT if (is_short_turn and self.system_prompt == ROBOTICS_AGENT_SYSTEM_PROMPT) else self.system_prompt
+
         try:
             response = self.provider.generate(
                 prompt=augmented_prompt,
-                system_prompt=self.system_prompt,
+                system_prompt=effective_sys,
                 history=self.conversation_history,
             )
             # Store in history
@@ -92,11 +95,14 @@ class AgentSession:
 
         full_reply = []
         model_name = getattr(self.provider, "model", "Qwen Coder")
+        is_short_turn = len(user_input.strip()) < 120 and not pre_tool_context and "refactor" not in user_input.lower()
+        effective_sys = ROBOTICS_FAST_CHAT_PROMPT if (is_short_turn and self.system_prompt == ROBOTICS_AGENT_SYSTEM_PROMPT) else self.system_prompt
+
         try:
             if hasattr(self.provider, "generate_stream"):
                 for token in self.provider.generate_stream(
                     prompt=augmented_prompt,
-                    system_prompt=self.system_prompt,
+                    system_prompt=effective_sys,
                     history=self.conversation_history,
                 ):
                     full_reply.append(token)
@@ -104,7 +110,7 @@ class AgentSession:
             else:
                 resp = self.provider.generate(
                     prompt=augmented_prompt,
-                    system_prompt=self.system_prompt,
+                    system_prompt=effective_sys,
                     history=self.conversation_history,
                 )
                 full_reply.append(resp.content)

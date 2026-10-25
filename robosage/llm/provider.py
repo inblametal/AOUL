@@ -233,14 +233,30 @@ def get_installed_ollama_models(host: str = "http://127.0.0.1:11434", force_refr
         return []
 
 
+def resolve_turbo_model(host: str = "http://127.0.0.1:11434") -> Optional[str]:
+    """Finds the fastest lightweight model (0.5b, 1b, 1.5b, 3b) for 20+ tok/s output."""
+    installed = get_installed_ollama_models(host)
+    for pattern in [":0.5b", "0.5b", ":1b", "1b", "1.5b", "3b"]:
+        for m in installed:
+            if pattern in m.lower():
+                return m
+    return None
+
+
 def resolve_best_local_model(host: str = "http://127.0.0.1:11434", requested: Optional[str] = None) -> str:
-    """Finds best matching model in Ollama, prioritizing Qwen Coder."""
+    """Finds best matching model in Ollama, prioritizing Qwen Coder or Turbo Fast."""
     installed = get_installed_ollama_models(host)
     if not installed:
-        return requested if (requested and requested.lower() not in ("auto", "qwen", "qwen-coder", "qwencoder", "local")) else "qwen2.5-coder:latest"
+        return requested if (requested and requested.lower() not in ("auto", "qwen", "qwen-coder", "qwencoder", "local", "turbo", "fast")) else "qwen2.5-coder:latest"
+
+    # Explicit turbo / speed request
+    if requested and requested.lower() in ("turbo", "fast", "speed", "turbo-fast"):
+        turbo = resolve_turbo_model(host)
+        if turbo:
+            return turbo
 
     # If requested model was explicitly specified, use/match it
-    if requested and requested.lower() not in ("auto", "qwen", "qwen-coder", "qwencoder", "local"):
+    if requested and requested.lower() not in ("auto", "qwen", "qwen-coder", "qwencoder", "local", "turbo", "fast"):
         for m in installed:
             if m.lower() == requested.lower() or m.lower().startswith(requested.lower() + ":"):
                 return m
@@ -406,15 +422,24 @@ class QwenProvider(BaseLLMProvider):
         url = f"{self.endpoint}/api/chat"
         messages = [{"role": "system", "content": effective_sys}]
         if history:
-            for msg in history:
+            for msg in history[-6:]:
                 messages.append({"role": msg.role, "content": msg.content})
         messages.append({"role": "user", "content": prompt})
 
+        cpu_threads = min(os.cpu_count() or 4, 8)
         payload = {
             "model": self.model,
             "messages": messages,
             "stream": True,
             "keep_alive": "24h",
+            "options": {
+                "num_thread": cpu_threads,
+                "num_ctx": 2048,
+                "num_predict": 1024,
+                "temperature": 0.2,
+                "top_k": 40,
+                "top_p": 0.9,
+            }
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
@@ -475,15 +500,24 @@ class QwenProvider(BaseLLMProvider):
             url = f"{self.endpoint}/api/chat"
             messages = [{"role": "system", "content": effective_sys}]
             if history:
-                for msg in history:
+                for msg in history[-6:]:
                     messages.append({"role": msg.role, "content": msg.content})
             messages.append({"role": "user", "content": prompt})
 
+            cpu_threads = min(os.cpu_count() or 4, 8)
             payload = {
                 "model": self.model,
                 "messages": messages,
                 "stream": False,
                 "keep_alive": "24h",
+                "options": {
+                    "num_thread": cpu_threads,
+                    "num_ctx": 2048,
+                    "num_predict": 1024,
+                    "temperature": 0.2,
+                    "top_k": 40,
+                    "top_p": 0.9,
+                }
             }
             data = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
