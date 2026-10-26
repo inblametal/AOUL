@@ -5,7 +5,7 @@ Unit tests for the Voice-Activated Hands-Free Lab Copilot subsystem.
 import os
 import unittest
 from unittest.mock import MagicMock, patch
-from robosage.voice.transcriber import VoiceTranscriber, VoiceEngineStatus, get_voice_transcriber
+from aoul.voice.transcriber import VoiceTranscriber, VoiceEngineStatus, get_voice_transcriber
 
 
 class TestVoiceSubsystem(unittest.TestCase):

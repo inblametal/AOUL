@@ -3,8 +3,8 @@ Unit tests for URDF Physics Auditor and Motor Thermal & Battery Simulator.
 """
 
 import unittest
-from robosage.diagnostics.urdf_auditor import UrdfAuditor
-from robosage.diagnostics.power_thermal import PowerThermalEngine
+from aoul.diagnostics.urdf_auditor import UrdfAuditor
+from aoul.diagnostics.power_thermal import PowerThermalEngine
 
 
 class TestUrdfAndPower(unittest.TestCase):

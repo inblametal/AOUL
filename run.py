@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-RoboSage Application Launcher.
-Starts the RoboSage Web Application Dashboard or launches the CLI.
+AOUL Application Launcher.
+Starts the AOUL Web Application Dashboard or launches the CLI.
 
 Usage:
     python3 run.py                 # Launch Web Application & open browser
@@ -22,8 +22,8 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from robosage.cli import Colors, print_banner
-from robosage.server import start_server
+from aoul.cli import Colors, print_banner
+from aoul.server import start_server
 
 
 def open_browser(url: str, delay_sec: float = 0.8):
@@ -52,7 +52,7 @@ def open_browser(url: str, delay_sec: float = 0.8):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="RoboSage: AI Senior Robotics Assistant & Safety Copilot Application",
+        description="AOUL: AI Senior Robotics Assistant & Safety Copilot Application",
     )
     parser.add_argument(
         "--port",
@@ -80,7 +80,7 @@ def main():
     args, unknown = parser.parse_known_args()
 
     if args.cli:
-        from robosage.cli import main as cli_main
+        from aoul.cli import main as cli_main
         sys.argv = [sys.argv[0]] + unknown
         cli_main()
         return

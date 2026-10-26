@@ -25,13 +25,13 @@ if [ ! -f "models/ggml-tiny.en.bin" ]; then
     bash ./models/download-ggml-model.sh tiny.en
 fi
 
-mkdir -p "$SCRIPT_DIR/robosage/bin"
-cp main "$SCRIPT_DIR/robosage/bin/whisper-cli" 2>/dev/null || cp build/bin/whisper-cli "$SCRIPT_DIR/robosage/bin/whisper-cli"
+mkdir -p "$SCRIPT_DIR/aoul/bin"
+cp main "$SCRIPT_DIR/aoul/bin/whisper-cli" 2>/dev/null || cp build/bin/whisper-cli "$SCRIPT_DIR/aoul/bin/whisper-cli"
 mkdir -p "$SCRIPT_DIR/models"
 cp models/ggml-tiny.en.bin "$SCRIPT_DIR/models/"
 
 echo "=========================================================="
 echo "✅ Whisper.cpp is ready!"
-echo "   Binary: $SCRIPT_DIR/robosage/bin/whisper-cli"
+echo "   Binary: $SCRIPT_DIR/aoul/bin/whisper-cli"
 echo "   Model:  $SCRIPT_DIR/models/ggml-tiny.en.bin"
 echo "=========================================================="

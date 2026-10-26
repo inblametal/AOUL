@@ -2,7 +2,7 @@
 
 import os
 import unittest
-from robosage.diagnostics.loophole_detector import (
+from aoul.diagnostics.loophole_detector import (
     LoopholeDetector,
     LoopholeSeverity,
     LoopholeType,

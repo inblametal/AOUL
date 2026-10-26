@@ -1,7 +1,7 @@
 """Tests for TF2 diagnostics."""
 
 import unittest
-from robosage.diagnostics.tf_diagnostics import TFDiagnostics, TFErrorType
+from aoul.diagnostics.tf_diagnostics import TFDiagnostics, TFErrorType
 
 
 class TestTFDiagnostics(unittest.TestCase):

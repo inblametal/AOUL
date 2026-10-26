@@ -69,8 +69,8 @@ if __name__ == '__main__':
     if (PROJECT_ROOT / "pyproject.toml").exists():
         zf.write(PROJECT_ROOT / "pyproject.toml", arcname="pyproject.toml")
 
-    # Add all files in robosage/
-    for root, dirs, files in os.walk(PROJECT_ROOT / "robosage"):
+    # Add all files in aoul/
+    for root, dirs, files in os.walk(PROJECT_ROOT / "aoul"):
         for file in files:
             if file.endswith((".pyc", ".pyo")) or "__pycache__" in root:
                 continue

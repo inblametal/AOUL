@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from robosage.llm.needle_provider import CactusNeedleProvider, _build_needle_tools
-from robosage.llm.provider import get_llm_provider
+from aoul.llm.needle_provider import CactusNeedleProvider, _build_needle_tools
+from aoul.llm.provider import get_llm_provider
 
 
 class TestCactusNeedleProvider(unittest.TestCase):
@@ -63,7 +63,7 @@ class TestCactusNeedleProvider(unittest.TestCase):
         self.assertFalse(res["is_compatible"])
         self.assertTrue(len(res["issues"]) > 0)
 
-    @patch("robosage.llm.needle_provider.needle.Needle")
+    @patch("aoul.llm.needle_provider.needle.Needle")
     def test_generate_with_tool_results(self, mock_needle_cls):
         mock_instance = MagicMock()
         mock_needle_cls.return_value = mock_instance
@@ -85,7 +85,7 @@ class TestCactusNeedleProvider(unittest.TestCase):
         self.assertIn("108.5 MB", resp.content)
         self.assertIn("95.0%", resp.content)
 
-    @patch("robosage.llm.needle_provider.needle.Needle")
+    @patch("aoul.llm.needle_provider.needle.Needle")
     def test_generate_stream(self, mock_needle_cls):
         mock_instance = MagicMock()
         mock_needle_cls.return_value = mock_instance
@@ -114,7 +114,7 @@ class TestCactusNeedleProvider(unittest.TestCase):
         self.assertIn("Direct Robotics Commands", resp_help.content)
         self.assertNotIn("check_qos_compatibility_tool with", resp_help.content)
 
-    @patch("robosage.llm.needle_provider.needle.Needle")
+    @patch("aoul.llm.needle_provider.needle.Needle")
     def test_low_confidence_suppression_guardrail(self, mock_needle_cls):
         mock_instance = MagicMock()
         mock_needle_cls.return_value = mock_instance

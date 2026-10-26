@@ -1,9 +1,9 @@
 """Tests for Agent Core & Tool Registry."""
 
 import unittest
-from robosage.agent.core import AgentSession
-from robosage.agent.tools import RoboticsToolRegistry
-from robosage.llm.provider import OfflineRoboticsProvider
+from aoul.agent.core import AgentSession
+from aoul.agent.tools import RoboticsToolRegistry
+from aoul.llm.provider import OfflineRoboticsProvider
 
 
 class TestAgent(unittest.TestCase):

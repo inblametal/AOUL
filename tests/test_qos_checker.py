@@ -1,7 +1,7 @@
 """Tests for QoS compatibility validator."""
 
 import unittest
-from robosage.diagnostics.qos_checker import (
+from aoul.diagnostics.qos_checker import (
     DurabilityPolicy,
     QoSProfile,
     ReliabilityPolicy,

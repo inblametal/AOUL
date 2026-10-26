@@ -10,7 +10,6 @@ __pycache__/
 
 # Application bundles (built from source via scripts/build_app.sh)
 AOUL.app/
-RoboSage.app/
 *.app/
 
 # Virtual environments

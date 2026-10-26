@@ -176,12 +176,12 @@
 }
 
 - (NSString *)resolveProjectDirectory {
-    NSString *liveWorkspace = @"/Users/apple/.gemini/antigravity/scratch/robosage";
+    NSString *liveWorkspace = @"/Users/apple/.gemini/antigravity/scratch/aoul";
     if ([[NSFileManager defaultManager] fileExistsAtPath:[liveWorkspace stringByAppendingPathComponent:@"run.py"]]) {
         return liveWorkspace;
     }
 
-    NSString *bundleRes = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"robosage"];
+    NSString *bundleRes = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"aoul"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:[bundleRes stringByAppendingPathComponent:@"run.py"]]) {
         return bundleRes;
     }

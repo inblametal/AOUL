@@ -3,7 +3,7 @@
 import json
 import unittest
 from unittest.mock import MagicMock, patch
-from robosage.llm.provider import QwenProvider, get_llm_provider
+from aoul.llm.provider import QwenProvider, get_llm_provider
 
 
 class TestQwenProvider(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestQwenProvider(unittest.TestCase):
         self.assertEqual(qwen.model, "qwen2.5-coder:7b")
         self.assertEqual(qwen.endpoint, "http://localhost:11434")
 
-    @patch("robosage.llm.provider.get_installed_ollama_models", return_value=["qwen2.5-coder"])
+    @patch("aoul.llm.provider.get_installed_ollama_models", return_value=["qwen2.5-coder"])
     def test_get_llm_provider_qwen(self, mock_models):
         p = get_llm_provider("qwen", model="qwen2.5-coder")
         self.assertIsInstance(p, QwenProvider)
@@ -43,8 +43,8 @@ class TestQwenProvider(unittest.TestCase):
 
 
     def test_resolve_best_local_model_priority(self):
-        from robosage.llm.provider import resolve_best_local_model
-        with patch("robosage.llm.provider.get_installed_ollama_models") as mock_tags:
+        from aoul.llm.provider import resolve_best_local_model
+        with patch("aoul.llm.provider.get_installed_ollama_models") as mock_tags:
             # Case 1: Has qwen2.5-coder
             mock_tags.return_value = ["llama3:latest", "qwen2.5-coder:7b", "mistral:latest"]
             self.assertEqual(resolve_best_local_model(), "qwen2.5-coder:7b")
@@ -64,7 +64,7 @@ class TestQwenProvider(unittest.TestCase):
     @patch("urllib.request.urlopen")
     def test_qwen_404_self_healing_retry(self, mock_urlopen):
         import urllib.error
-        from robosage.llm.provider import QwenProvider
+        from aoul.llm.provider import QwenProvider
 
         def fake_urlopen(req, *args, **kwargs):
             url = req.full_url if hasattr(req, 'full_url') else str(req)
@@ -116,7 +116,7 @@ class TestQwenProvider(unittest.TestCase):
 
     @patch("urllib.request.urlopen")
     def test_warm_up_local_model(self, mock_urlopen):
-        from robosage.llm.provider import warm_up_local_model
+        from aoul.llm.provider import warm_up_local_model
         captured_req = None
 
         def fake_urlopen(req, *args, **kwargs):

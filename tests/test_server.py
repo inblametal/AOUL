@@ -1,11 +1,11 @@
-"""Unit tests for RoboSage Web Server handlers and REST API dispatch."""
+"""Unit tests for AOUL Web Server handlers and REST API dispatch."""
 
 import io
 import json
 import unittest
 from unittest.mock import MagicMock
 
-from robosage.server import RoboSageRequestHandler
+from aoul.server import AOULRequestHandler
 
 
 class DummyServer:
@@ -18,7 +18,7 @@ class TestServerHandlers(unittest.TestCase):
         self.server = DummyServer()
 
     def _create_handler(self, path: str, method: str = "GET", body: dict = None):
-        handler = RoboSageRequestHandler.__new__(RoboSageRequestHandler)
+        handler = AOULRequestHandler.__new__(AOULRequestHandler)
         handler.server = self.server
         handler.path = path
         handler.command = method
@@ -31,10 +31,10 @@ class TestServerHandlers(unittest.TestCase):
 
         # Initialize singletons if needed
         if not hasattr(handler.server, "agent_session"):
-            from robosage.agent.core import AgentSession
-            from robosage.diagnostics.log_analyzer import ROS2LogAnalyzer
-            from robosage.diagnostics.loophole_detector import LoopholeDetector
-            from robosage.llm.provider import OfflineRoboticsProvider
+            from aoul.agent.core import AgentSession
+            from aoul.diagnostics.log_analyzer import ROS2LogAnalyzer
+            from aoul.diagnostics.loophole_detector import LoopholeDetector
+            from aoul.llm.provider import OfflineRoboticsProvider
             handler.server.llm_provider = OfflineRoboticsProvider()
             handler.server.agent_session = AgentSession(provider=handler.server.llm_provider)
             handler.server.log_analyzer = ROS2LogAnalyzer()

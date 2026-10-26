@@ -1,7 +1,7 @@
 """Tests for ROS 2 log analyzer & crash triage."""
 
 import unittest
-from robosage.diagnostics.log_analyzer import (
+from aoul.diagnostics.log_analyzer import (
     LogSeverity,
     RoboticsErrorCategory,
     ROS2LogAnalyzer,

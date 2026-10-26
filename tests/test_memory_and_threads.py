@@ -3,9 +3,9 @@
 import unittest
 from unittest.mock import MagicMock
 
-from robosage.agent.core import AgentSession, deduplicate_repeating_sentences
-from robosage.agent.memory import ConversationManager, ConversationThread, RoboticsMemoryLayer
-from robosage.llm.provider import OfflineRoboticsProvider
+from aoul.agent.core import AgentSession, deduplicate_repeating_sentences
+from aoul.agent.memory import ConversationManager, ConversationThread, RoboticsMemoryLayer
+from aoul.llm.provider import OfflineRoboticsProvider
 
 
 class TestMemoryAndThreads(unittest.TestCase):

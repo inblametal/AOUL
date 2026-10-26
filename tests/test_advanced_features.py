@@ -7,10 +7,10 @@ Unit tests for AOUL Advanced Research Capabilities:
 """
 
 import unittest
-from robosage.diagnostics.sarif_exporter import SarifExporter
-from robosage.diagnostics.bag_inspector import RosbagInspector
-from robosage.diagnostics.behavior_tree_analyzer import BehaviorTreeAnalyzer
-from robosage.diagnostics.safety_shield import SafetyShieldEngine
+from aoul.diagnostics.sarif_exporter import SarifExporter
+from aoul.diagnostics.bag_inspector import RosbagInspector
+from aoul.diagnostics.behavior_tree_analyzer import BehaviorTreeAnalyzer
+from aoul.diagnostics.safety_shield import SafetyShieldEngine
 
 
 class TestAdvancedFeatures(unittest.TestCase):

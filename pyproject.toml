@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "robosage"
+name = "aoul"
 version = "0.1.0"
 description = "AI Robotics Assistant, Safety Auditor & Real-time Diagnostic Copilot"
 readme = "README.md"
@@ -35,4 +35,4 @@ test = [
 ]
 
 [project.scripts]
-robosage = "robosage.cli:main"
+aoul = "aoul.cli:main"

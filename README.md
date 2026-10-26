@@ -122,7 +122,7 @@ AOUL/
 │   ├── AOUL.dmg            # macOS Drag-and-Drop Disk Image installer
 │   ├── AOUL.exe            # Windows Standalone 64-bit PE Executable
 │   └── run_windows.bat     # Windows 1-click launch script
-├── robosage/               # Core Python Engine
+├── aoul/               # Core Python Engine
 │   ├── agent/              # Multi-turn reasoning, prompts & tool orchestrator
 │   ├── diagnostics/        # Loophole fuzzer, QoS checker & TF2 analyzer
 │   ├── llm/                # Qwen Coder, Ollama & offline heuristic providers

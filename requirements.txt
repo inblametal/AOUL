@@ -1,4 +1,4 @@
-# RoboSage is zero-dependency by default (pure Python standard library).
+# AOUL is zero-dependency by default (pure Python standard library).
 # Optional packages for enhanced CLI formatting and testing:
 rich>=13.0.0
 click>=8.0.0

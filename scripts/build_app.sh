@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 echo "🔨 Building AOUL Native macOS Universal Binary (x86_64 + arm64)..."
 mkdir -p AOUL.app/Contents/MacOS
-mkdir -p AOUL.app/Contents/Resources/robosage
+mkdir -p AOUL.app/Contents/Resources/aoul
 
 # Compile universal native Cocoa/WebKit binary
 clang -O2 -framework Cocoa -framework WebKit \
@@ -15,11 +15,6 @@ clang -O2 -framework Cocoa -framework WebKit \
     -o AOUL.app/Contents/MacOS/AOUL
 
 chmod +x AOUL.app/Contents/MacOS/AOUL
-
-# Copy icon if available
-if [ -f RoboSage.app/Contents/Resources/AppIcon.icns ]; then
-    cp RoboSage.app/Contents/Resources/AppIcon.icns AOUL.app/Contents/Resources/AppIcon.icns
-fi
 
 # Write Info.plist
 cat << 'EOF' > AOUL.app/Contents/Info.plist
@@ -70,8 +65,8 @@ EOF
 
 echo "📦 Synchronizing workspace assets to AOUL.app bundle..."
 rsync -av --exclude "__pycache__" --exclude "*.pyc" --exclude ".git" \
-    robosage run.py requirements.txt pyproject.toml examples \
-    AOUL.app/Contents/Resources/robosage/
+    aoul run.py requirements.txt pyproject.toml examples \
+    AOUL.app/Contents/Resources/aoul/
 
 echo "✅ AOUL.app built successfully!"
 echo "   App location: $SCRIPT_DIR/AOUL.app"

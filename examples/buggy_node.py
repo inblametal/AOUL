@@ -2,7 +2,7 @@
 """
 buggy_robot_controller.py
 A realistic ROS 2 node that appears to work initially, but contains
-critical robotics loopholes and hazards that RoboSage detects.
+critical robotics loopholes and hazards that AOUL detects.
 """
 
 import math
