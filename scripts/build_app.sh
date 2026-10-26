@@ -53,6 +53,10 @@ cat << 'EOF' > AOUL.app/Contents/Info.plist
     <true/>
     <key>NSRequiresAquaSystemAppearance</key>
     <false/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>AOUL Hands-Free Lab Copilot requires microphone access for offline voice commands at the robotics bench.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>AOUL Hands-Free Lab Copilot requires speech recognition for hands-free robot telemetry and diagnostics.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>

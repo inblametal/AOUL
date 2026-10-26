@@ -87,6 +87,10 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_get_memory()
             return
 
+        if path == "/api/voice-status":
+            self._handle_voice_status()
+            return
+
         if path == "/api/local-models":
             self._handle_local_models()
             return
@@ -129,6 +133,8 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._handle_post_threads(body)
         elif path == "/api/memory":
             self._handle_post_memory(body)
+        elif path == "/api/voice-transcribe":
+            self._handle_voice_transcribe(body, body_bytes)
         elif path == "/api/audit":
             self._handle_audit(body)
         elif path == "/api/triage":
@@ -251,6 +257,32 @@ class RoboSageRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"success": True, "memory": session.conversation_manager.memory_layer.to_dict()})
         else:
             self._send_json({"error": f"Unknown memory action '{action}'"}, status=400)
+
+    def _handle_voice_status(self):
+        from robosage.voice.transcriber import get_voice_transcriber
+        status = get_voice_transcriber().get_status()
+        self._send_json(status.to_dict())
+
+    def _handle_voice_transcribe(self, body: Dict[str, Any], raw_bytes: bytes):
+        import base64
+        from robosage.voice.transcriber import get_voice_transcriber
+
+        audio_b64 = body.get("audio") if isinstance(body, dict) else None
+        if audio_b64:
+            try:
+                # Support data:audio/...;base64, header if present
+                if "," in audio_b64:
+                    audio_b64 = audio_b64.split(",", 1)[1]
+                audio_bytes = base64.b64decode(audio_b64)
+            except Exception as e:
+                self._send_json({"error": f"Invalid base64 audio: {e}"}, status=400)
+                return
+        else:
+            audio_bytes = raw_bytes
+
+        transcriber = get_voice_transcriber()
+        result = transcriber.transcribe_audio_bytes(audio_bytes)
+        self._send_json(result)
 
     def _handle_chat(self, body: Dict[str, Any]):
         try:

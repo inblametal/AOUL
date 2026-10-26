@@ -168,6 +168,24 @@ class RunawayRobot(Node):
         handler._handle_chat(body)
         handler.send_response.assert_called_with(400)
 
+    def test_api_voice_status(self):
+        handler = self._create_handler("/api/voice-status", method="GET")
+        handler._handle_voice_status()
+        data = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertIn("wake_word", data)
+        self.assertIn("active_engine", data)
+        self.assertIn("supported_models", data)
+
+    def test_api_voice_transcribe(self):
+        import base64
+        dummy_wav = b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
+        b64 = base64.b64encode(dummy_wav).decode("ascii")
+        body = {"audio": f"data:audio/wav;base64,{b64}"}
+        handler = self._create_handler("/api/voice-transcribe", method="POST", body=body)
+        handler._handle_voice_transcribe(body, b"")
+        data = json.loads(handler.wfile.getvalue().decode("utf-8"))
+        self.assertTrue("text" in data or "engine" in data or "error" in data)
+
 
 if __name__ == "__main__":
     unittest.main()

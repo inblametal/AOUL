@@ -354,6 +354,17 @@
           <span id="turbo-status-label">Turbo: ON</span>
         </button>
 
+        <!-- Voice Hands-Free Lab Copilot -->
+        <div class="flex items-center bg-slate-900 border border-slate-700/80 rounded-lg overflow-hidden shadow-sm">
+          <button id="handsfree-mic-btn" onclick="toggleHandsFreeVoice()" class="px-2.5 py-1.5 text-slate-300 hover:text-cyan-300 hover:bg-slate-800 font-mono flex items-center gap-1.5 transition cursor-pointer" title="Hands-Free Lab Copilot (Offline Whisper.cpp / Web Speech)">
+            <i data-lucide="mic" id="handsfree-mic-icon" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span id="handsfree-status-label">Voice: OFF</span>
+          </button>
+          <button onclick="toggleVoiceSettingsModal()" class="px-2 py-1.5 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 border-l border-slate-800 transition" title="Voice Lab Bench Settings">
+            <i data-lucide="sliders" class="w-3 h-3"></i>
+          </button>
+        </div>
+
         <select id="model-select" class="bg-slate-800 border border-slate-700 text-emerald-300 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500 font-mono">
           <option value="qwen" selected>⚡ Turbo Fast (Local Qwen - Instant 20 tok/s)</option>
           <option value="cactus:cactus-needle-3">🌵 Cactus Needle 3 (Edge 35MB Tool Caller)</option>
@@ -380,6 +391,27 @@
         </button>
       </div>
     </header>
+
+    <!-- Hands-Free Active Voice Bench HUD Bar -->
+    <div id="handsfree-bench-hud" class="hidden bg-slate-950/95 border-b border-cyan-500/40 px-6 py-2 flex items-center justify-between text-xs transition-all z-20">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 font-mono">
+          <span id="handsfree-pulse-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+          <span class="text-cyan-300 font-bold" id="handsfree-hud-status">🎙️ LISTENING (Wake-word: "AOUL")</span>
+        </div>
+        <canvas id="voice-waveform-canvas" width="100" height="18" class="bg-slate-900 rounded border border-slate-800"></canvas>
+        <span id="handsfree-transcript-preview" class="text-slate-300 italic truncate max-w-[360px] lg:max-w-[550px]">Waiting for speech... Try: "AOUL, emergency stop" or "AOUL, run simulation"</span>
+      </div>
+      <div class="flex items-center gap-3 font-mono text-[11px]">
+        <button id="handsfree-tts-toggle-btn" onclick="toggleTtsOutput()" class="px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-950/30 text-emerald-300 flex items-center gap-1 hover:bg-emerald-900/40 transition">
+          <i data-lucide="volume-2" class="w-3 h-3"></i>
+          <span id="handsfree-tts-label">TTS Voice: ON</span>
+        </button>
+        <button onclick="toggleHandsFreeVoice()" class="text-slate-400 hover:text-red-400 p-1" title="Close Hands-Free Voice">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
 
     <!-- CONTENT TABS -->
     <div class="flex-1 overflow-hidden relative">
@@ -998,119 +1030,349 @@
       <!-- TAB 7: 3D DIGITAL TWIN & KINEMATICS STUDIO -->
       <!-- ========================================== -->
       <section id="tab-twin" class="tab-content h-full hidden flex-col p-6 overflow-y-auto custom-scroll">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
             <h3 class="text-base font-bold text-white flex items-center gap-2">
               <i data-lucide="box" class="w-5 h-5 text-cyan-400"></i>
               3D WebGL Digital Twin & Kinematics Studio
             </h3>
-            <p class="text-xs text-slate-400">Interactive Forward Kinematics, TF2 coordinate frame transforms, and multi-DOF robot articulators (100% offline).</p>
+            <p class="text-xs text-slate-400">Articulated Forward Kinematics, 5 Realistic Robot Platforms & Programmable Sandbox Code Test Panel (100% offline).</p>
           </div>
-          <div class="flex items-center gap-2">
-            <select id="twin-model-select" onchange="switchTwinModel(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-cyan-300 rounded-lg px-3 py-1.5 outline-none font-mono">
-              <option value="arm">6-DOF Industrial Manipulator</option>
-              <option value="amr">Autonomous Mobile Robot (AMR)</option>
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- 5 Realistic Robot Models Dropdown -->
+            <select id="twin-model-select" onchange="switchTwinModel(this.value)" class="bg-slate-800 border border-cyan-500/40 text-xs text-cyan-300 rounded-lg px-3 py-1.5 outline-none font-mono font-medium shadow-sm cursor-pointer">
+              <option value="arm" selected>🦾 6-DOF Industrial Arm (UR10e)</option>
+              <option value="amr">🤖 Autonomous Mobile Robot (AMR AGV)</option>
+              <option value="quadruped">🐕 12-DOF Quadruped Robot Dog</option>
+              <option value="rover">🚙 Ackermann 4WD Exploration Rover</option>
+              <option value="drone">🛸 Aerial Quadcopter Drone</option>
             </select>
-            <button onclick="resetTwinCamera()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+            <button onclick="resetTwinCamera()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
               <i data-lucide="compass" class="w-3.5 h-3.5"></i>
               <span>Reset View</span>
             </button>
-            <button onclick="toggleUrdfImportModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-purple-300 border border-purple-500/30 transition flex items-center gap-1.5" title="Import and articulately render custom robot URDF in 3D">
+            <button onclick="toggleUrdfImportModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-purple-300 border border-purple-500/30 transition flex items-center gap-1.5 cursor-pointer" title="Import and articulately render custom robot URDF in 3D">
               <i data-lucide="upload" class="w-3.5 h-3.5"></i>
               <span>Import URDF</span>
             </button>
-            <button onclick="toggleTwinAnimation()" id="twin-demo-btn" class="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition">
+            <button onclick="toggleTwinAnimation()" id="twin-demo-btn" class="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
               <i data-lucide="play" class="w-3.5 h-3.5"></i>
               <span>Demo Trajectory</span>
+            </button>
+            <button onclick="estopTwinCode()" id="twin-estop-btn" class="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-red-900/30 transition cursor-pointer" title="Emergency Stop - Immediately freezes all joints and trips safety interlock">
+              <i data-lucide="octagon" class="w-3.5 h-3.5"></i>
+              <span>E-STOP</span>
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[500px]">
-          <!-- 3D Canvas Viewport -->
-          <div class="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden relative shadow-inner">
-            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-[560px]">
+          <!-- 3D Canvas Viewport (7 Cols on LG) -->
+          <div class="lg:col-span-7 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden relative shadow-inner">
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 z-10 shrink-0">
               <span class="font-mono flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                WebGL 3D Viewport (Three.js r128 Local)
+                <span id="twin-viewport-title" class="font-bold text-slate-200">WebGL 3D Twin (UR10e 6-DOF Industrial Arm)</span>
               </span>
-              <div class="flex items-center gap-3 text-[11px]">
-                <span class="text-red-400 font-mono">X: Red</span>
-                <span class="text-emerald-400 font-mono">Y: Green</span>
-                <span class="text-blue-400 font-mono">Z: Blue</span>
+              <div class="flex items-center gap-3 text-[11px] font-mono">
+                <span class="text-red-400 font-bold">X: Red</span>
+                <span class="text-emerald-400 font-bold">Y: Green</span>
+                <span class="text-blue-400 font-bold">Z: Blue</span>
               </div>
             </div>
-            <div id="twin-viewport" class="flex-1 w-full h-full min-h-[420px] bg-slate-950 relative flex items-center justify-center">
+
+            <!-- 3D Viewport with Floating HUD -->
+            <div id="twin-viewport" class="flex-1 w-full h-full min-h-[460px] bg-slate-950 relative flex items-center justify-center">
               <!-- WebGL Canvas appended dynamically -->
+            </div>
+
+            <!-- Floating Viewport Telemetry HUD -->
+            <div class="absolute bottom-3 left-3 right-3 pointer-events-none flex items-center justify-between z-10">
+              <div id="twin-hud-telemetry" class="bg-slate-950/85 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-lg text-[11px] font-mono text-cyan-300 flex items-center gap-3 shadow-lg pointer-events-auto">
+                <span id="twin-hud-model-tag" class="text-slate-400 font-bold uppercase text-[9px] bg-slate-800 px-1.5 py-0.5 rounded">ARM</span>
+                <span id="twin-hud-coords">Pose: X 0.452m | Y 0.000m | Z 0.612m</span>
+                <span id="twin-hud-extra" class="text-slate-400">J1: 0° | J2: 30° | J3: -45°</span>
+              </div>
+              <div id="twin-hud-interlock" class="bg-emerald-950/85 backdrop-blur-md border border-emerald-500/40 px-3 py-1.5 rounded-lg text-[10px] font-mono text-emerald-300 font-bold flex items-center gap-1.5 shadow-lg pointer-events-auto">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="twin-interlock-text">INTERLOCK: NOMINAL</span>
+              </div>
             </div>
           </div>
 
-          <!-- Kinematics & Joint Controls -->
-          <div class="flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-y-auto custom-scroll space-y-4">
-            <div class="border-b border-slate-800 pb-3">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5 mb-2">
-                <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
-                Joint Positions (Forward Kinematics)
-              </h4>
-              <div class="space-y-2 text-xs">
-                <div>
-                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
-                    <span>Base Pan (J1)</span>
-                    <span id="j1-val">0°</span>
-                  </div>
-                  <input type="range" id="j1-slider" min="-180" max="180" value="0" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+          <!-- Right Column: Dual-Tab (Programmable Code Test Panel vs Manual Sliders) (5 Cols on LG) -->
+          <div class="lg:col-span-5 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <!-- Right Panel Header Sub-Tabs -->
+            <div class="flex items-center justify-between border-b border-slate-800 bg-slate-950/60 p-2 shrink-0">
+              <div class="flex items-center gap-1">
+                <button id="twin-tab-code-btn" onclick="switchTwinSubtab('code')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm cursor-pointer transition">
+                  <i data-lucide="code" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  <span>Code Test Sandbox</span>
+                </button>
+                <button id="twin-tab-manual-btn" onclick="switchTwinSubtab('manual')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition">
+                  <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-400"></i>
+                  <span>Manual Sliders</span>
+                </button>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400 hidden sm:inline">Async Sandbox API</span>
+            </div>
+
+            <!-- SUBTAB 1: PROGRAMMABLE CODE TEST PANEL -->
+            <div id="twin-panel-code" class="flex-1 flex flex-col p-3.5 space-y-3 overflow-y-auto custom-scroll">
+              <!-- Preset Selector & Execution Toolbar -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                    <i data-lucide="file-code" class="w-3 h-3 text-cyan-400"></i>
+                    Test Script Presets
+                  </label>
+                  <select id="twin-code-preset-select" onchange="loadTwinCodePreset(this.value)" class="bg-slate-800 border border-slate-700 text-[11px] text-cyan-300 rounded px-2.5 py-1 outline-none font-mono flex-1 max-w-[240px]">
+                    <option value="arm-pick-place">Arm: 6-Axis Pick & Place Cycle</option>
+                    <option value="arm-singularity">Arm: Reachability & Singularity Scan</option>
+                    <option value="amr-patrol">AMR: Waypoint Patrol & Safety Decel</option>
+                    <option value="quadruped-trot">Quadruped: Dynamic Trot Gait & Attitude</option>
+                    <option value="rover-slalom">Rover: Ackermann Slalom & Steering</option>
+                    <option value="drone-orbit">Drone: 3D Helical Waypoint & Hover</option>
+                  </select>
                 </div>
-                <div>
-                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
-                    <span>Shoulder Pitch (J2)</span>
-                    <span id="j2-val">30°</span>
-                  </div>
-                  <input type="range" id="j2-slider" min="-90" max="90" value="30" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+
+                <!-- Execution Toolbar Buttons -->
+                <div class="flex items-center gap-1.5">
+                  <button onclick="runTwinCode()" id="twin-code-run-btn" class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow transition cursor-pointer">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    <span>Run Script</span>
+                  </button>
+                  <button onclick="pauseTwinCode()" id="twin-code-pause-btn" class="py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 border border-slate-700 transition cursor-pointer" title="Pause execution">
+                    <i data-lucide="pause" class="w-3.5 h-3.5"></i>
+                    <span>Pause</span>
+                  </button>
+                  <button onclick="stepTwinCode()" class="py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold flex items-center gap-1 border border-slate-700 transition cursor-pointer" title="Step next frame">
+                    <i data-lucide="step-forward" class="w-3.5 h-3.5"></i>
+                    <span>Step</span>
+                  </button>
+                  <button onclick="resetTwinCode()" class="py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 border border-slate-700 transition cursor-pointer" title="Reset robot to initial pose">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    <span>Reset</span>
+                  </button>
                 </div>
-                <div>
-                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
-                    <span>Elbow (J3)</span>
-                    <span id="j3-val">-45°</span>
-                  </div>
-                  <input type="range" id="j3-slider" min="-150" max="150" value="-45" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+              </div>
+
+              <!-- Interactive Code Editor -->
+              <div class="flex flex-col flex-1 min-h-[170px] bg-slate-950 rounded-xl border border-slate-800 overflow-hidden relative shadow-inner">
+                <div class="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-[10px] text-slate-400 flex items-center justify-between font-mono">
+                  <span class="flex items-center gap-1.5 text-cyan-400 font-semibold">
+                    <i data-lucide="terminal" class="w-3 h-3"></i>
+                    test_sandbox_controller.js
+                  </span>
+                  <span id="twin-editor-status" class="text-slate-500">Ready | Async Execution</span>
                 </div>
-                <div>
-                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
-                    <span>Wrist Pitch (J4)</span>
-                    <span id="j4-val">15°</span>
-                  </div>
-                  <input type="range" id="j4-slider" min="-90" max="90" value="15" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                <textarea id="twin-code-editor" spellcheck="false" class="w-full flex-1 p-3 bg-slate-950 text-cyan-200 font-mono text-[11px] leading-relaxed resize-none outline-none custom-scroll min-h-[170px]" placeholder="// Write robot control code here..."></textarea>
+              </div>
+
+              <!-- API Cheat Sheet & Live Execution Console -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="cpu" class="w-3 h-3 text-emerald-400"></i>
+                    Test Execution Console & Kinematic Limits
+                  </span>
+                  <button onclick="clearTwinConsole()" class="text-slate-500 hover:text-slate-300 transition text-[9px] lowercase font-mono">clear</button>
                 </div>
-                <div>
-                  <div class="flex justify-between text-[11px] text-slate-300 font-mono">
-                    <span>Wrist Roll (J5)</span>
-                    <span id="j5-val">0°</span>
-                  </div>
-                  <input type="range" id="j5-slider" min="-180" max="180" value="0" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                <div id="twin-console" class="h-28 bg-slate-950 border border-slate-800/90 rounded-lg p-2.5 font-mono text-[10px] text-slate-300 overflow-y-auto custom-scroll space-y-1">
+                  <div class="text-cyan-400/80">[SYSTEM] Digital Twin sandbox initialized. Select a test preset and click "Run Script".</div>
                 </div>
               </div>
             </div>
 
-            <!-- Cartesian Pose -->
-            <div class="bg-slate-950/70 p-3 rounded-lg border border-slate-800 space-y-2">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tool Frame Pose (tool0 w.r.t base_link)</span>
-              <div class="grid grid-cols-3 gap-2 font-mono text-[11px]">
-                <div class="bg-slate-900 p-1.5 rounded text-center">
-                  <span class="text-slate-500 block text-[9px]">X (m)</span>
-                  <span id="pose-x" class="text-cyan-300 font-semibold">0.452</span>
+            <!-- SUBTAB 2: MANUAL JOINT & ACTUATOR CONTROLS -->
+            <div id="twin-panel-manual" class="flex-1 hidden flex-col p-4 space-y-4 overflow-y-auto custom-scroll">
+              <!-- Arm Controls -->
+              <div id="manual-controls-arm" class="space-y-3">
+                <div class="border-b border-slate-800 pb-2 flex items-center justify-between">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                    6-DOF Joint Positions
+                  </h4>
+                  <span class="text-[10px] font-mono text-slate-400">UR10e Limits: ±180°</span>
                 </div>
-                <div class="bg-slate-900 p-1.5 rounded text-center">
-                  <span class="text-slate-500 block text-[9px]">Y (m)</span>
-                  <span id="pose-y" class="text-cyan-300 font-semibold">0.000</span>
-                </div>
-                <div class="bg-slate-900 p-1.5 rounded text-center">
-                  <span class="text-slate-500 block text-[9px]">Z (m)</span>
-                  <span id="pose-z" class="text-cyan-300 font-semibold">0.612</span>
+                <div class="space-y-2 text-xs">
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Base Pan (J1)</span>
+                      <span id="j1-val">0°</span>
+                    </div>
+                    <input type="range" id="j1-slider" min="-180" max="180" value="0" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Shoulder Pitch (J2)</span>
+                      <span id="j2-val">30°</span>
+                    </div>
+                    <input type="range" id="j2-slider" min="-90" max="90" value="30" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Elbow (J3)</span>
+                      <span id="j3-val">-45°</span>
+                    </div>
+                    <input type="range" id="j3-slider" min="-150" max="150" value="-45" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Wrist Pitch (J4)</span>
+                      <span id="j4-val">15°</span>
+                    </div>
+                    <input type="range" id="j4-slider" min="-90" max="90" value="15" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Wrist Roll (J5)</span>
+                      <span id="j5-val">0°</span>
+                    </div>
+                    <input type="range" id="j5-slider" min="-180" max="180" value="0" oninput="updateArmJoints()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Pneumatic Gripper Jaw</span>
+                      <span id="gripper-val">0.0 (Closed)</span>
+                    </div>
+                    <input type="range" id="gripper-slider" min="0" max="100" value="0" oninput="updateGripperManual(this.value)" class="w-full accent-emerald-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
                 </div>
               </div>
-              <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                <span>Reachability:</span>
-                <span class="text-emerald-400 font-semibold">NOMINAL (Singularity Free)</span>
+
+              <!-- AMR Controls -->
+              <div id="manual-controls-amr" class="hidden space-y-3">
+                <div class="border-b border-slate-800 pb-2">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                    <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+                    AMR Differential Drive Teleop
+                  </h4>
+                </div>
+                <div class="space-y-2 text-xs">
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Linear Velocity (v_x)</span>
+                      <span id="amr-vx-val">0.0 m/s</span>
+                    </div>
+                    <input type="range" id="amr-vx-slider" min="-1.5" max="1.5" step="0.1" value="0.0" oninput="updateAmrManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Angular Rate (omega_z)</span>
+                      <span id="amr-wz-val">0.0 rad/s</span>
+                    </div>
+                    <input type="range" id="amr-wz-slider" min="-2.0" max="2.0" step="0.1" value="0.0" oninput="updateAmrManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quadruped Controls -->
+              <div id="manual-controls-quadruped" class="hidden space-y-3">
+                <div class="border-b border-slate-800 pb-2">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                    <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                    12-DOF Quadruped Dog Attitude
+                  </h4>
+                </div>
+                <div class="space-y-2 text-xs">
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Body Pitch Angle</span>
+                      <span id="quad-pitch-val">0°</span>
+                    </div>
+                    <input type="range" id="quad-pitch-slider" min="-25" max="25" value="0" oninput="updateQuadrupedManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Body Roll Angle</span>
+                      <span id="quad-roll-val">0°</span>
+                    </div>
+                    <input type="range" id="quad-roll-slider" min="-20" max="20" value="0" oninput="updateQuadrupedManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Torso Ground Clearance</span>
+                      <span id="quad-height-val">0.32 m</span>
+                    </div>
+                    <input type="range" id="quad-height-slider" min="0.15" max="0.45" step="0.02" value="0.32" oninput="updateQuadrupedManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rover Controls -->
+              <div id="manual-controls-rover" class="hidden space-y-3">
+                <div class="border-b border-slate-800 pb-2">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                    <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+                    Ackermann Steering & Throttle
+                  </h4>
+                </div>
+                <div class="space-y-2 text-xs">
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Steering Angle (delta)</span>
+                      <span id="rover-steer-val">0°</span>
+                    </div>
+                    <input type="range" id="rover-steer-slider" min="-30" max="30" value="0" oninput="updateRoverManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Drive Throttle</span>
+                      <span id="rover-speed-val">0.0 m/s</span>
+                    </div>
+                    <input type="range" id="rover-speed-slider" min="-2.0" max="2.0" step="0.1" value="0.0" oninput="updateRoverManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Drone Controls -->
+              <div id="manual-controls-drone" class="hidden space-y-3">
+                <div class="border-b border-slate-800 pb-2">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                    <i data-lucide="wind" class="w-3.5 h-3.5"></i>
+                    Quadcopter Flight Controls
+                  </h4>
+                </div>
+                <div class="space-y-2 text-xs">
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Flight Altitude (Z)</span>
+                      <span id="drone-alt-val">0.0 m</span>
+                    </div>
+                    <input type="range" id="drone-alt-slider" min="0" max="4.0" step="0.1" value="0.0" oninput="updateDroneManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] text-slate-300 font-mono">
+                      <span>Yaw Heading</span>
+                      <span id="drone-yaw-val">0°</span>
+                    </div>
+                    <input type="range" id="drone-yaw-slider" min="-180" max="180" value="0" oninput="updateDroneManual()" class="w-full accent-cyan-400 h-1 bg-slate-800 rounded cursor-pointer">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cartesian Pose Readout -->
+              <div class="bg-slate-950/70 p-3 rounded-lg border border-slate-800 space-y-2 mt-auto">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cartesian Pose (tool0 / base_link)</span>
+                <div class="grid grid-cols-3 gap-2 font-mono text-[11px]">
+                  <div class="bg-slate-900 p-1.5 rounded text-center">
+                    <span class="text-slate-500 block text-[9px]">X (m)</span>
+                    <span id="pose-x" class="text-cyan-300 font-semibold">0.452</span>
+                  </div>
+                  <div class="bg-slate-900 p-1.5 rounded text-center">
+                    <span class="text-slate-500 block text-[9px]">Y (m)</span>
+                    <span id="pose-y" class="text-cyan-300 font-semibold">0.000</span>
+                  </div>
+                  <div class="bg-slate-900 p-1.5 rounded text-center">
+                    <span class="text-slate-500 block text-[9px]">Z (m)</span>
+                    <span id="pose-z" class="text-cyan-300 font-semibold">0.612</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                  <span>Reachability:</span>
+                  <span id="twin-reachability-badge" class="text-emerald-400 font-semibold">NOMINAL (Singularity Free)</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1603,6 +1865,106 @@
     </div>
   </div>
 
+  <!-- Hands-Free Voice Lab Copilot Settings Modal -->
+  <div id="voice-settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto custom-scroll">
+      <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="mic" class="w-4 h-4 text-cyan-400"></i>
+          Hands-Free Voice Lab Copilot (Whisper.cpp / Web Speech)
+        </h3>
+        <button onclick="toggleVoiceSettingsModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400 mb-4">
+        Local speech-to-text for robotics lab benches when your hands are occupied wiring motors, probing test points, or wrenching on a physical robot.
+      </p>
+
+      <div class="space-y-4 text-xs">
+        <!-- Wake-Word Configuration -->
+        <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
+          <label class="block font-bold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <i data-lucide="radio" class="w-3.5 h-3.5 text-cyan-400"></i>
+            Wake-Word Trigger
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="voice-wakeword-input" value="AOUL" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-cyan-300 font-mono text-xs focus:border-cyan-500 outline-none" placeholder="AOUL">
+            <select onchange="document.getElementById('voice-wakeword-input').value = this.value" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1.5">
+              <option value="AOUL">AOUL (Default)</option>
+              <option value="Hey AOUL">Hey AOUL</option>
+              <option value="RoboSage">RoboSage</option>
+              <option value="">None (Always Listen)</option>
+            </select>
+          </div>
+          <span class="text-[10px] text-slate-400">Prefix your command with this word (e.g. <em>"AOUL, emergency stop!"</em>).</span>
+        </div>
+
+        <!-- Speech Engine Status -->
+        <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Local Engine Status
+            </span>
+            <span id="voice-engine-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Checking...</span>
+          </div>
+          <div class="text-[11px] text-slate-400 space-y-1 font-mono">
+            <div>Engine: <span id="voice-engine-desc" class="text-slate-200">whisper.cpp & Web Speech</span></div>
+            <div>Model Weights: <span id="voice-model-desc" class="text-slate-200">ggml-tiny.en.bin (~75MB)</span></div>
+          </div>
+        </div>
+
+        <!-- Audio Output (Text-to-Speech) -->
+        <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-400"></i>
+              Spoken Audio Feedback (TTS)
+            </label>
+            <input type="checkbox" id="voice-tts-toggle" checked onchange="toggleTtsOutput(this.checked)" class="accent-cyan-400 cursor-pointer">
+          </div>
+          <p class="text-[10px] text-slate-400">When enabled, AOUL will speak copilot responses aloud hands-free so you can keep working on the robot bench.</p>
+        </div>
+
+        <!-- Voice Command Reference Cheat Sheet -->
+        <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-2">
+          <span class="font-bold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <i data-lucide="command" class="w-3.5 h-3.5 text-purple-400"></i>
+            Voice Commands Quick Reference
+          </span>
+          <div class="space-y-1.5 text-[11px] font-mono text-slate-300">
+            <div class="flex justify-between py-1 border-b border-slate-800/60">
+              <span class="text-red-300 font-bold">"AOUL, emergency stop"</span>
+              <span class="text-slate-400">Triggers instantaneous E-Stop halt</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-slate-800/60">
+              <span class="text-cyan-300 font-bold">"AOUL, run simulation"</span>
+              <span class="text-slate-400">Runs 3D digital twin test script</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-slate-800/60">
+              <span class="text-cyan-300 font-bold">"AOUL, switch to quadruped"</span>
+              <span class="text-slate-400">Switches active 3D robot model</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-slate-800/60">
+              <span class="text-cyan-300 font-bold">"AOUL, reset view"</span>
+              <span class="text-slate-400">Centers 3D camera in viewport</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-emerald-300 font-bold">"AOUL, [diagnostic question]"</span>
+              <span class="text-slate-400">Queries Copilot and speaks answer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-2 border-t border-slate-800 pt-3">
+        <button onclick="toggleVoiceSettingsModal()" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition cursor-pointer">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- APPLICATION LOGIC -->
   <script>
     // Initialize Lucide icons
@@ -2033,11 +2395,17 @@
           } else if (streamText) {
             appendChatMessage('assistant', streamText, activeModel);
           }
+          if (typeof isVoiceActive !== 'undefined' && isVoiceActive && isTtsEnabled && streamText) {
+            speakVoiceResponse(streamText);
+          }
         } else {
           const data = await resp.json();
           removeThinkingIndicator();
           if (data.reply) {
             appendChatMessage('assistant', data.reply, data.provider);
+            if (typeof isVoiceActive !== 'undefined' && isVoiceActive && isTtsEnabled) {
+              speakVoiceResponse(data.reply);
+            }
           } else {
             appendChatMessage('assistant', `⚠️ ${data.error || 'Failed to get response.'}`);
           }
@@ -2067,6 +2435,9 @@
           removeThinkingIndicator();
           if (data.reply) {
             appendChatMessage('assistant', data.reply, data.provider);
+            if (typeof isVoiceActive !== 'undefined' && isVoiceActive && isTtsEnabled) {
+              speakVoiceResponse(data.reply);
+            }
           } else {
             appendChatMessage('assistant', `⚠️ ${data.error || 'Failed to get response.'}`);
           }
@@ -3103,19 +3474,35 @@
     }
 
     // ==========================================
-    // 3D DIGITAL TWIN MODULE (THREE.JS)
+    // 3D DIGITAL TWIN MODULE (THREE.JS R128)
+    // 5 REALISTIC ROBOT PLATFORMS & PROGRAMMABLE SANDBOX
     // ==========================================
     let twinScene, twinCamera, twinRenderer, twinControls;
-    let armGroup, amrGroup, baseLinkAxes, toolAxes;
+    let armGroup, amrGroup, quadrupedGroup, roverGroup, droneGroup;
+    let baseLinkAxes, toolAxes;
     let isTwinAnimating = false;
     let twinAnimTime = 0;
+    let activeTwinModel = 'arm';
+
+    // Articulated joint references
     let armJoints = {};
+    let gripperFingers = { left: null, right: null };
+    let amrComponents = { leftWheel: null, rightWheel: null, lidarRing: null, bumperMesh: null };
+    let quadrupedLegs = { fl: {}, fr: {}, rl: {}, rr: {} };
+    let roverWheels = { fl: null, fr: null, rl: null, rr: null, steerL: null, steerR: null };
+    let droneRotors = [];
+
+    // Programmable Sandbox Runtime state
+    let isCodeRunning = false;
+    let isCodePaused = false;
+    let codeAbortController = null;
+    let codeStepResolver = null;
+    let twinInterlockTripped = false;
 
     function initThreeDigitalTwin() {
       const container = document.getElementById('twin-viewport');
       if (!container) return;
       if (twinRenderer) {
-        // Resize existing canvas
         const w = container.clientWidth || 600;
         const h = container.clientHeight || 450;
         twinCamera.aspect = w / h;
@@ -3125,7 +3512,7 @@
       }
 
       if (typeof THREE === 'undefined') {
-        container.innerHTML = '<div class="text-slate-400 text-xs p-8 text-center">Three.js loading offline...</div>';
+        container.innerHTML = '<div class="text-slate-400 text-xs p-8 text-center font-mono">Three.js loading offline...</div>';
         return;
       }
 
@@ -3138,9 +3525,11 @@
       twinCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
       twinCamera.position.set(2.4, 2.0, 2.8);
 
-      twinRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      twinRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
       twinRenderer.setSize(width, height);
-      twinRenderer.setPixelRatio(window.devicePixelRatio || 1);
+      twinRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      twinRenderer.shadowMap.enabled = true;
+      twinRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
       container.innerHTML = '';
       container.appendChild(twinRenderer.domElement);
 
@@ -3148,49 +3537,104 @@
         twinControls = new THREE.OrbitControls(twinCamera, twinRenderer.domElement);
         twinControls.enableDamping = true;
         twinControls.dampingFactor = 0.05;
-        twinControls.maxPolarAngle = Math.PI / 2 + 0.1;
+        twinControls.maxPolarAngle = Math.PI / 2 + 0.05;
+        twinControls.minDistance = 0.5;
+        twinControls.maxDistance = 15;
       }
 
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.6);
+      // Studio Lighting
+      const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.65);
       twinScene.add(ambientLight);
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-      dirLight.position.set(5, 10, 7);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
+      dirLight.position.set(6, 12, 8);
+      dirLight.castShadow = true;
       twinScene.add(dirLight);
 
+      const fillLight = new THREE.DirectionalLight(0x0284c7, 0.5);
+      fillLight.position.set(-6, 4, -6);
+      twinScene.add(fillLight);
+
       // Grid Floor
-      const grid = new THREE.GridHelper(8, 16, 0x06b6d4, 0x1e293b);
-      grid.position.y = -0.01;
+      const grid = new THREE.GridHelper(10, 20, 0x06b6d4, 0x1e293b);
+      grid.position.y = -0.005;
       twinScene.add(grid);
 
-      // Base World Axes
+      // Base World Coordinate Frame
       baseLinkAxes = new THREE.AxesHelper(0.5);
       twinScene.add(baseLinkAxes);
 
-      // Construct 6-DOF Robotic Arm
+      // Build 5 Realistic Models
       buildRoboticArmModel();
       buildAmrModel();
-      switchTwinModel('arm');
+      buildQuadrupedModel();
+      buildRoverModel();
+      buildDroneModel();
 
-      // Animation loop
+      // Set initial active model
+      switchTwinModel('arm');
+      loadTwinCodePreset('arm-pick-place');
+
+      // Animation Loop
       function animateTwin() {
         requestAnimationFrame(animateTwin);
         if (twinControls) twinControls.update();
 
-        if (isTwinAnimating) {
-          twinAnimTime += 0.02;
-          const j1 = Math.sin(twinAnimTime * 0.8) * 60;
-          const j2 = Math.sin(twinAnimTime * 0.5) * 40 + 20;
-          const j3 = Math.cos(twinAnimTime * 0.6) * 50 - 30;
-          const j4 = Math.sin(twinAnimTime * 1.1) * 35;
-          const j5 = Math.cos(twinAnimTime * 0.9) * 80;
+        const dt = 0.016;
+        twinAnimTime += dt;
 
-          document.getElementById('j1-slider').value = j1;
-          document.getElementById('j2-slider').value = j2;
-          document.getElementById('j3-slider').value = j3;
-          document.getElementById('j4-slider').value = j4;
-          document.getElementById('j5-slider').value = j5;
-          updateArmJoints();
+        // Continuous demo trajectory if engaged
+        if (isTwinAnimating) {
+          if (activeTwinModel === 'arm') {
+            const j1 = Math.sin(twinAnimTime * 0.9) * 60;
+            const j2 = Math.sin(twinAnimTime * 0.6) * 35 + 20;
+            const j3 = Math.cos(twinAnimTime * 0.7) * 45 - 35;
+            const j4 = Math.sin(twinAnimTime * 1.2) * 30;
+            const j5 = Math.cos(twinAnimTime * 0.9) * 75;
+            setArmJointValues(j1, j2, j3, j4, j5);
+          } else if (activeTwinModel === 'amr') {
+            if (amrGroup) {
+              const r = 1.4;
+              const spd = 0.8;
+              amrGroup.position.x = Math.sin(twinAnimTime * spd) * r;
+              amrGroup.position.z = Math.cos(twinAnimTime * spd) * r;
+              amrGroup.rotation.y = twinAnimTime * spd + Math.PI / 2;
+              if (amrComponents.leftWheel) amrComponents.leftWheel.rotation.x += 0.15;
+              if (amrComponents.rightWheel) amrComponents.rightWheel.rotation.x += 0.15;
+            }
+          } else if (activeTwinModel === 'quadruped') {
+            animateQuadrupedTrot(twinAnimTime * 6);
+          } else if (activeTwinModel === 'rover') {
+            if (roverGroup) {
+              roverGroup.position.x = Math.sin(twinAnimTime * 0.7) * 1.8;
+              const steerAngle = Math.cos(twinAnimTime * 0.7) * 0.35;
+              if (roverWheels.steerL) roverWheels.steerL.rotation.y = steerAngle * 1.1;
+              if (roverWheels.steerR) roverWheels.steerR.rotation.y = steerAngle * 0.9;
+              if (roverWheels.fl) roverWheels.fl.rotation.x += 0.12;
+              if (roverWheels.fr) roverWheels.fr.rotation.x += 0.12;
+              if (roverWheels.rl) roverWheels.rl.rotation.x += 0.12;
+              if (roverWheels.rr) roverWheels.rr.rotation.x += 0.12;
+            }
+          } else if (activeTwinModel === 'drone') {
+            if (droneGroup) {
+              droneGroup.position.y = 1.2 + Math.sin(twinAnimTime * 1.5) * 0.25;
+              droneGroup.position.x = Math.sin(twinAnimTime * 0.8) * 0.8;
+              droneGroup.position.z = Math.cos(twinAnimTime * 0.8) * 0.8;
+              droneGroup.rotation.x = Math.cos(twinAnimTime * 0.8) * 0.12;
+              droneGroup.rotation.z = -Math.sin(twinAnimTime * 0.8) * 0.12;
+              droneRotors.forEach(r => { r.rotation.y += 0.5; });
+            }
+          }
+        }
+
+        // Active spinning animations (e.g. Drone propellers, AMR LiDAR mirror)
+        if (activeTwinModel === 'drone' && !isTwinAnimating) {
+          droneRotors.forEach((r, idx) => {
+            r.rotation.y += (idx % 2 === 0 ? 0.35 : -0.35);
+          });
+        }
+        if (activeTwinModel === 'amr' && amrComponents.lidarRing) {
+          amrComponents.lidarRing.rotation.z += 0.04;
         }
 
         twinRenderer.render(twinScene, twinCamera);
@@ -3207,155 +3651,598 @@
       });
     }
 
+    // ==========================================
+    // 1. 6-DOF INDUSTRIAL MANIPULATOR (UR10e STYLE)
+    // ==========================================
     function buildRoboticArmModel() {
       armGroup = new THREE.Group();
+      armGroup.name = "RoboticArmGroup";
 
-      const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
-      const cyanMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.3, metalness: 0.7 });
-      const jointMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.2, metalness: 0.9 });
-      const toolMat = new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.3, metalness: 0.8 });
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.85 });
+      const cyanMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.3, metalness: 0.75 });
+      const jointMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.25, metalness: 0.9 });
+      const accentMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.6 });
+      const fingerMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2, metalness: 0.8 });
 
-      // Base pedestal
-      const basePed = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.2, 32), baseMat);
-      basePed.position.y = 0.1;
+      // Pedestal base
+      const basePed = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 0.22, 32), baseMat);
+      basePed.position.y = 0.11;
       armGroup.add(basePed);
 
-      // J1: Pan Group
+      // Mounting bolt ring
+      for (let i = 0; i < 6; i++) {
+        const ang = (i / 6) * Math.PI * 2;
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.03, 12), jointMat);
+        bolt.position.set(Math.cos(ang) * 0.32, 0.22, Math.sin(ang) * 0.32);
+        armGroup.add(bolt);
+      }
+
+      // J1: Base Pan
       armJoints.j1 = new THREE.Group();
-      armJoints.j1.position.y = 0.2;
+      armJoints.j1.position.y = 0.22;
       armGroup.add(armJoints.j1);
 
-      const shoulderBase = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 24), baseMat);
-      armJoints.j1.add(shoulderBase);
+      const shoulderTurn = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.24, 32), baseMat);
+      shoulderTurn.position.y = 0.12;
+      armJoints.j1.add(shoulderTurn);
 
-      // J2: Shoulder Pitch Group
+      // J2: Shoulder Pitch
       armJoints.j2 = new THREE.Group();
-      armJoints.j2.position.y = 0.15;
+      armJoints.j2.position.set(0, 0.24, 0);
       armJoints.j1.add(armJoints.j2);
 
-      const shoulderSphere = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), jointMat);
-      armJoints.j2.add(shoulderSphere);
+      const shoulderHub = new THREE.Mesh(new THREE.SphereGeometry(0.19, 28, 28), jointMat);
+      armJoints.j2.add(shoulderHub);
 
-      // Upper Arm Link (L1 = 0.6m)
-      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.6, 24), cyanMat);
-      upperArm.position.y = 0.3;
+      // Upper Arm Link (0.62m)
+      const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.62, 28), cyanMat);
+      upperArm.position.y = 0.31;
       armJoints.j2.add(upperArm);
 
-      // J3: Elbow Pitch Group
+      // J3: Elbow Pitch
       armJoints.j3 = new THREE.Group();
-      armJoints.j3.position.y = 0.6;
+      armJoints.j3.position.y = 0.62;
       armJoints.j2.add(armJoints.j3);
 
-      const elbowSphere = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 24), jointMat);
-      armJoints.j3.add(elbowSphere);
+      const elbowHub = new THREE.Mesh(new THREE.SphereGeometry(0.16, 28, 28), jointMat);
+      armJoints.j3.add(elbowHub);
 
-      // Forearm Link (L2 = 0.5m)
-      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.5, 24), cyanMat);
-      forearm.position.y = 0.25;
+      // Forearm Link (0.52m)
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.52, 28), cyanMat);
+      forearm.position.y = 0.26;
       armJoints.j3.add(forearm);
 
-      // J4: Wrist Pitch Group
+      // J4: Wrist Pitch
       armJoints.j4 = new THREE.Group();
-      armJoints.j4.position.y = 0.5;
+      armJoints.j4.position.y = 0.52;
       armJoints.j3.add(armJoints.j4);
 
-      const wristSphere = new THREE.Mesh(new THREE.SphereGeometry(0.12, 20, 20), jointMat);
-      armJoints.j4.add(wristSphere);
+      const wrist1Hub = new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 24), jointMat);
+      armJoints.j4.add(wrist1Hub);
 
-      // J5: Wrist Roll Group
+      // J5: Wrist Roll
       armJoints.j5 = new THREE.Group();
-      armJoints.j5.position.y = 0.1;
+      armJoints.j5.position.y = 0.11;
       armJoints.j4.add(armJoints.j5);
 
-      // Tool / End Effector Gripper
-      const toolBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), toolMat);
+      // Tool Flange Base
+      const toolBase = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.07, 0.14), accentMat);
+      toolBase.position.y = 0.035;
       armJoints.j5.add(toolBase);
 
-      // Gripper fingers
-      const f1 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.03), jointMat);
-      f1.position.set(-0.04, 0.07, 0);
-      armJoints.j5.add(f1);
-      const f2 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.03), jointMat);
-      f2.position.set(0.04, 0.07, 0);
-      armJoints.j5.add(f2);
+      // Pneumatic Parallel Gripper
+      const jawLeft = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.11, 0.04), fingerMat);
+      jawLeft.position.set(-0.045, 0.09, 0);
+      armJoints.j5.add(jawLeft);
+      gripperFingers.left = jawLeft;
 
-      // Tool coordinate frame (TF2 tool0)
-      toolAxes = new THREE.AxesHelper(0.25);
-      toolAxes.position.y = 0.12;
+      const jawRight = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.11, 0.04), fingerMat);
+      jawRight.position.set(0.045, 0.09, 0);
+      armJoints.j5.add(jawRight);
+      gripperFingers.right = jawRight;
+
+      // Rubber grip pads
+      const padL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.08, 0.035), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.9 }));
+      padL.position.set(0.012, 0, 0);
+      jawLeft.add(padL);
+
+      const padR = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.08, 0.035), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.9 }));
+      padR.position.set(-0.012, 0, 0);
+      jawRight.add(padR);
+
+      // Tool Coordinate Frame tool0
+      toolAxes = new THREE.AxesHelper(0.26);
+      toolAxes.position.y = 0.15;
       armJoints.j5.add(toolAxes);
 
       twinScene.add(armGroup);
       updateArmJoints();
     }
 
+    // ==========================================
+    // 2. AUTONOMOUS MOBILE ROBOT (AMR WAREHOUSE AGV)
+    // ==========================================
     function buildAmrModel() {
       amrGroup = new THREE.Group();
-      const chassisMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
-      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
-      const lidarMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.2, metalness: 0.9 });
+      amrGroup.name = "AmrGroup";
 
-      // Chassis
-      const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.6), chassisMat);
-      chassis.position.y = 0.18;
+      const chassisMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.8 });
+      const coverMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.9 });
+      const tireMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.25, metalness: 0.8 });
+      const lidarMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.2, metalness: 0.9 });
+      const estopMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 });
+
+      // Low-profile rounded industrial chassis
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.65), chassisMat);
+      chassis.position.y = 0.19;
       amrGroup.add(chassis);
 
-      // Wheels
-      const leftWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 24), wheelMat);
-      leftWheel.rotation.z = Math.PI / 2;
-      leftWheel.position.set(0.25, 0.12, 0.33);
+      // Sleek top cover
+      const topCover = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.44, 0.06, 32), coverMat);
+      topCover.position.set(0, 0.32, 0);
+      amrGroup.add(topCover);
+
+      // Safety Optical Bumper Band around chassis
+      const bumperGeo = new THREE.BoxGeometry(0.92, 0.03, 0.67);
+      const bumperMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, wireframe: false });
+      const bumper = new THREE.Mesh(bumperGeo, bumperMat);
+      bumper.position.y = 0.19;
+      amrGroup.add(bumper);
+      amrComponents.bumperMesh = bumper;
+
+      // Differential Drive Traction Wheels
+      const wheelGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.08, 28);
+      const rimGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.082, 20);
+
+      const leftWheel = new THREE.Group();
+      leftWheel.position.set(0.12, 0.14, 0.36);
+      const lTire = new THREE.Mesh(wheelGeo, tireMat);
+      lTire.rotation.x = Math.PI / 2;
+      const lRim = new THREE.Mesh(rimGeo, rimMat);
+      lRim.rotation.x = Math.PI / 2;
+      leftWheel.add(lTire);
+      leftWheel.add(lRim);
       amrGroup.add(leftWheel);
+      amrComponents.leftWheel = leftWheel;
 
-      const rightWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 24), wheelMat);
-      rightWheel.rotation.z = Math.PI / 2;
-      rightWheel.position.set(0.25, 0.12, -0.33);
+      const rightWheel = new THREE.Group();
+      rightWheel.position.set(0.12, 0.14, -0.36);
+      const rTire = new THREE.Mesh(wheelGeo, tireMat);
+      rTire.rotation.x = Math.PI / 2;
+      const rRim = new THREE.Mesh(rimGeo, rimMat);
+      rRim.rotation.x = Math.PI / 2;
+      rightWheel.add(rTire);
+      rightWheel.add(rRim);
       amrGroup.add(rightWheel);
+      amrComponents.rightWheel = rightWheel;
 
-      // Front caster
-      const caster = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), wheelMat);
-      caster.position.set(-0.28, 0.07, 0);
-      amrGroup.add(caster);
+      // Dual omni swivel casters (Front & Rear)
+      const caster1 = new THREE.Mesh(new THREE.SphereGeometry(0.065, 20, 20), tireMat);
+      caster1.position.set(-0.32, 0.065, 0);
+      amrGroup.add(caster1);
 
-      // LiDAR Dome
-      const lidar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.09, 24), lidarMat);
-      lidar.position.set(0.15, 0.32, 0);
-      amrGroup.add(lidar);
+      const caster2 = new THREE.Mesh(new THREE.SphereGeometry(0.065, 20, 20), tireMat);
+      caster2.position.set(0.34, 0.065, 0);
+      amrGroup.add(caster2);
 
-      // Laser scan simulation ray ring
-      const ringGeo = new THREE.RingGeometry(0.2, 2.5, 32);
+      // LiDAR Sensor Turret
+      const lidarBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.08, 24), chassisMat);
+      lidarBase.position.set(0.2, 0.38, 0);
+      amrGroup.add(lidarBase);
+
+      const lidarHead = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.06, 24), lidarMat);
+      lidarHead.position.set(0.2, 0.44, 0);
+      amrGroup.add(lidarHead);
+
+      // 360° LiDAR Simulated Scanning Ring
+      const ringGeo = new THREE.RingGeometry(0.25, 2.6, 36);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
       const laserRing = new THREE.Mesh(ringGeo, ringMat);
       laserRing.rotation.x = Math.PI / 2;
-      laserRing.position.set(0.15, 0.32, 0);
+      laserRing.position.set(0.2, 0.44, 0);
       amrGroup.add(laserRing);
+      amrComponents.lidarRing = laserRing;
+
+      // Top E-Stop Mushroom Button
+      const estopCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 16), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+      estopCollar.position.set(-0.25, 0.36, 0);
+      amrGroup.add(estopCollar);
+
+      const estopBtn = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 16), estopMat);
+      estopBtn.position.set(-0.25, 0.38, 0);
+      amrGroup.add(estopBtn);
 
       amrGroup.visible = false;
       twinScene.add(amrGroup);
     }
 
-    function switchTwinModel(modelType) {
-      if (modelType === 'arm') {
-        if (armGroup) armGroup.visible = true;
-        if (amrGroup) amrGroup.visible = false;
-      } else {
-        if (armGroup) armGroup.visible = false;
-        if (amrGroup) amrGroup.visible = true;
+    // ==========================================
+    // 3. 12-DOF ARTICULATED QUADRUPED ROBOT DOG
+    // ==========================================
+    function buildQuadrupedModel() {
+      quadrupedGroup = new THREE.Group();
+      quadrupedGroup.name = "QuadrupedGroup";
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.85 });
+      const shellMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.9 });
+      const hipMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.25, metalness: 0.8 });
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.7 });
+      const footMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.8 });
+
+      // Torso Main Body
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.18, 0.28), bodyMat);
+      torso.position.y = 0.35;
+      quadrupedGroup.add(torso);
+
+      // Sleek top cowl with cooling fins
+      const topCowl = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.06, 0.26), shellMat);
+      topCowl.position.set(0, 0.46, 0);
+      quadrupedGroup.add(topCowl);
+
+      // Vision / Sensor Visor Head
+      const headVisor = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.22), hipMat);
+      headVisor.position.set(0.38, 0.38, 0);
+      quadrupedGroup.add(headVisor);
+
+      // Stereoscopic Camera Lenses
+      const lensGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.02, 16);
+      const lensMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+      const lensL = new THREE.Mesh(lensGeo, lensMat);
+      lensL.rotation.z = Math.PI / 2;
+      lensL.position.set(0.45, 0.39, 0.06);
+      quadrupedGroup.add(lensL);
+
+      const lensR = new THREE.Mesh(lensGeo, lensMat);
+      lensR.rotation.z = Math.PI / 2;
+      lensR.position.set(0.45, 0.39, -0.06);
+      quadrupedGroup.add(lensR);
+
+      // Function to assemble an articulated 3-DOF leg (Hip roll, Thigh pitch, Calf pitch, Foot)
+      function createLeg(xOffset, zOffset, legKey) {
+        const hipRollGroup = new THREE.Group();
+        hipRollGroup.position.set(xOffset, 0.35, zOffset);
+        quadrupedGroup.add(hipRollGroup);
+
+        const hipMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 20), hipMat);
+        hipMotor.rotation.x = Math.PI / 2;
+        hipRollGroup.add(hipMotor);
+
+        const thighGroup = new THREE.Group();
+        thighGroup.position.set(0, 0, (zOffset > 0 ? 0.05 : -0.05));
+        hipRollGroup.add(thighGroup);
+
+        // Upper Thigh Link (0.22m)
+        const thighBone = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.22, 0.045), legMat);
+        thighBone.position.y = -0.11;
+        thighGroup.add(thighBone);
+
+        const kneeGroup = new THREE.Group();
+        kneeGroup.position.y = -0.22;
+        thighGroup.add(kneeGroup);
+
+        const kneeHub = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), hipMat);
+        kneeGroup.add(kneeHub);
+
+        // Lower Calf Link (0.22m)
+        const calfBone = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.015, 0.22, 16), legMat);
+        calfBone.position.y = -0.11;
+        kneeGroup.add(calfBone);
+
+        // Rubber Contact Foot Pad
+        const foot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 16), footMat);
+        foot.position.y = -0.22;
+        kneeGroup.add(foot);
+
+        quadrupedLegs[legKey] = {
+          hip: hipRollGroup,
+          thigh: thighGroup,
+          knee: kneeGroup,
+          foot: foot
+        };
       }
+
+      // 4 Articulated Legs
+      createLeg(0.24, 0.16, 'fl');
+      createLeg(0.24, -0.16, 'fr');
+      createLeg(-0.24, 0.16, 'rl');
+      createLeg(-0.24, -0.16, 'rr');
+
+      // Set initial natural stance
+      quadrupedLegs.fl.thigh.rotation.z = 0.35;
+      quadrupedLegs.fl.knee.rotation.z = -0.7;
+      quadrupedLegs.fr.thigh.rotation.z = 0.35;
+      quadrupedLegs.fr.knee.rotation.z = -0.7;
+      quadrupedLegs.rl.thigh.rotation.z = -0.35;
+      quadrupedLegs.rl.knee.rotation.z = 0.7;
+      quadrupedLegs.rr.thigh.rotation.z = -0.35;
+      quadrupedLegs.rr.knee.rotation.z = 0.7;
+
+      quadrupedGroup.visible = false;
+      twinScene.add(quadrupedGroup);
     }
 
-    function updateArmJoints() {
+    function animateQuadrupedTrot(t) {
+      if (!quadrupedLegs.fl.thigh) return;
+      const swingAmp = 0.45;
+      const s1 = Math.sin(t);
+      const s2 = -s1;
+
+      // Diagonal gait pairs (FL + RR vs FR + RL)
+      quadrupedLegs.fl.thigh.rotation.z = 0.35 + s1 * swingAmp;
+      quadrupedLegs.fl.knee.rotation.z = -0.7 - Math.max(0, s1) * 0.5;
+
+      quadrupedLegs.rr.thigh.rotation.z = -0.35 + s1 * swingAmp;
+      quadrupedLegs.rr.knee.rotation.z = 0.7 + Math.max(0, s1) * 0.5;
+
+      quadrupedLegs.fr.thigh.rotation.z = 0.35 + s2 * swingAmp;
+      quadrupedLegs.fr.knee.rotation.z = -0.7 - Math.max(0, s2) * 0.5;
+
+      quadrupedLegs.rl.thigh.rotation.z = -0.35 + s2 * swingAmp;
+      quadrupedLegs.rl.knee.rotation.z = 0.7 + Math.max(0, s2) * 0.5;
+    }
+
+    // ==========================================
+    // 4. ACKERMANN STEERING 4WD ROVER
+    // ==========================================
+    function buildRoverModel() {
+      roverGroup = new THREE.Group();
+      roverGroup.name = "RoverGroup";
+
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 });
+      const tireMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.9 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.25, metalness: 0.8 });
+      const mastMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.7 });
+
+      // Chassis main pan
+      const pan = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.16, 0.5), frameMat);
+      pan.position.y = 0.22;
+      roverGroup.add(pan);
+
+      // Roll cage frame tubes
+      const cage1 = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.85, 12), frameMat);
+      cage1.rotation.z = Math.PI / 2;
+      cage1.position.set(0, 0.38, 0.22);
+      roverGroup.add(cage1);
+
+      const cage2 = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.85, 12), frameMat);
+      cage2.rotation.z = Math.PI / 2;
+      cage2.position.set(0, 0.38, -0.22);
+      roverGroup.add(cage2);
+
+      // Sensor Mast with Pan-Tilt Head
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35, 16), mastMat);
+      mast.position.set(0.25, 0.45, 0);
+      roverGroup.add(mast);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.14), frameMat);
+      head.position.set(0.25, 0.64, 0);
+      roverGroup.add(head);
+
+      // Wheels & Ackermann Steering Knuckles
+      const tireGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.11, 24);
+      const rimGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.115, 16);
+
+      function createWheelMesh() {
+        const g = new THREE.Group();
+        const tire = new THREE.Mesh(tireGeo, tireMat);
+        tire.rotation.x = Math.PI / 2;
+        const rim = new THREE.Mesh(rimGeo, rimMat);
+        rim.rotation.x = Math.PI / 2;
+        g.add(tire);
+        g.add(rim);
+        return g;
+      }
+
+      // Front Left with Ackermann Steering Knuckle
+      roverWheels.steerL = new THREE.Group();
+      roverWheels.steerL.position.set(0.36, 0.16, 0.33);
+      roverWheels.fl = createWheelMesh();
+      roverWheels.steerL.add(roverWheels.fl);
+      roverGroup.add(roverWheels.steerL);
+
+      // Front Right with Ackermann Steering Knuckle
+      roverWheels.steerR = new THREE.Group();
+      roverWheels.steerR.position.set(0.36, 0.16, -0.33);
+      roverWheels.fr = createWheelMesh();
+      roverWheels.steerR.add(roverWheels.fr);
+      roverGroup.add(roverWheels.steerR);
+
+      // Rear Driven Wheels
+      roverWheels.rl = createWheelMesh();
+      roverWheels.rl.position.set(-0.36, 0.16, 0.33);
+      roverGroup.add(roverWheels.rl);
+
+      roverWheels.rr = createWheelMesh();
+      roverWheels.rr.position.set(-0.36, 0.16, -0.33);
+      roverGroup.add(roverWheels.rr);
+
+      roverGroup.visible = false;
+      twinScene.add(roverGroup);
+    }
+
+    // ==========================================
+    // 5. AERIAL QUADCOPTER DRONE
+    // ==========================================
+    function buildDroneModel() {
+      droneGroup = new THREE.Group();
+      droneGroup.name = "DroneGroup";
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.85 });
+      const carbonMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.5 });
+      const motorMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.25, metalness: 0.85 });
+      const propMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2, metalness: 0.7, transparent: true, opacity: 0.85 });
+
+      // Central avionics fuselage
+      const core = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.24), bodyMat);
+      core.position.y = 0.5;
+      droneGroup.add(core);
+
+      // Top battery pack
+      const batt = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.14), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+      batt.position.set(0, 0.58, 0);
+      droneGroup.add(batt);
+
+      // 4 Diagonal Carbon Fiber Arms (X-Frame)
+      const armLength = 0.38;
+      droneRotors = [];
+
+      const angles = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
+      angles.forEach((ang, idx) => {
+        const armX = Math.cos(ang) * (armLength / 2);
+        const armZ = Math.sin(ang) * (armLength / 2);
+
+        const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, armLength, 16), carbonMat);
+        boom.position.set(armX, 0.5, armZ);
+        boom.rotation.z = Math.PI / 2;
+        boom.rotation.y = -ang;
+        droneGroup.add(boom);
+
+        // Brushless Motor Hub
+        const motorX = Math.cos(ang) * armLength;
+        const motorZ = Math.sin(ang) * armLength;
+        const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.06, 20), motorMat);
+        motor.position.set(motorX, 0.54, motorZ);
+        droneGroup.add(motor);
+
+        // 2-Blade High-Speed Propeller
+        const propGroup = new THREE.Group();
+        propGroup.position.set(motorX, 0.58, motorZ);
+
+        const blade1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.006, 0.035), propMat);
+        propGroup.add(blade1);
+        droneGroup.add(propGroup);
+        droneRotors.push(propGroup);
+
+        // Navigation Beacon LEDs (Red Port / Green Starboard)
+        const ledColor = (ang > 0 && ang < Math.PI) ? 0xef4444 : 0x10b981;
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 12), new THREE.MeshBasicMaterial({ color: ledColor }));
+        led.position.set(motorX, 0.51, motorZ);
+        droneGroup.add(led);
+      });
+
+      // Front 2-Axis Gimbal Camera
+      const gimbal = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), motorMat);
+      gimbal.position.set(0.14, 0.45, 0);
+      droneGroup.add(gimbal);
+
+      // Carbon Landing Skids
+      const skidL = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.015, 0.02), carbonMat);
+      skidL.position.set(0, 0.38, 0.16);
+      droneGroup.add(skidL);
+
+      const skidR = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.015, 0.02), carbonMat);
+      skidR.position.set(0, 0.38, -0.16);
+      droneGroup.add(skidR);
+
+      droneGroup.visible = false;
+      twinScene.add(droneGroup);
+    }
+
+    // ==========================================
+    // MODEL SWITCHING & KINEMATICS DISPATCH
+    // ==========================================
+    function switchTwinModel(modelType) {
+      activeTwinModel = modelType;
+
+      if (armGroup) armGroup.visible = (modelType === 'arm');
+      if (amrGroup) amrGroup.visible = (modelType === 'amr');
+      if (quadrupedGroup) quadrupedGroup.visible = (modelType === 'quadruped');
+      if (roverGroup) roverGroup.visible = (modelType === 'rover');
+      if (droneGroup) droneGroup.visible = (modelType === 'drone');
+
+      const select = document.getElementById('twin-model-select');
+      if (select && select.value !== modelType) select.value = modelType;
+
+      // Update Viewport Title & Telemetry HUD Tag
+      const titles = {
+        arm: 'WebGL 3D Twin (UR10e 6-DOF Industrial Arm)',
+        amr: 'WebGL 3D Twin (Autonomous Mobile Robot AGV)',
+        quadruped: 'WebGL 3D Twin (12-DOF Quadruped Robot Dog)',
+        rover: 'WebGL 3D Twin (Ackermann 4WD Exploration Rover)',
+        drone: 'WebGL 3D Twin (Aerial Quadcopter Drone)'
+      };
+      const titleEl = document.getElementById('twin-viewport-title');
+      if (titleEl) titleEl.innerText = titles[modelType] || 'WebGL 3D Twin';
+
+      const tagEl = document.getElementById('twin-hud-model-tag');
+      if (tagEl) tagEl.innerText = modelType.toUpperCase();
+
+      // Show matching manual controls
+      ['arm', 'amr', 'quadruped', 'rover', 'drone'].forEach(m => {
+        const el = document.getElementById(`manual-controls-${m}`);
+        if (el) el.classList.toggle('hidden', m !== modelType);
+      });
+
+      // Update camera target for optimal perspective
+      if (twinCamera && twinControls) {
+        if (modelType === 'arm') {
+          twinControls.target.set(0, 0.45, 0);
+          twinCamera.position.set(2.4, 2.0, 2.8);
+        } else if (modelType === 'drone') {
+          twinControls.target.set(0, 0.8, 0);
+          twinCamera.position.set(2.0, 2.2, 2.4);
+        } else {
+          twinControls.target.set(0, 0.25, 0);
+          twinCamera.position.set(2.2, 1.6, 2.5);
+        }
+        twinControls.update();
+      }
+
+      // Map model to appropriate code preset
+      const presetMap = {
+        arm: 'arm-pick-place',
+        amr: 'amr-patrol',
+        quadruped: 'quadruped-trot',
+        rover: 'rover-slalom',
+        drone: 'drone-orbit'
+      };
+      if (presetMap[modelType]) {
+        loadTwinCodePreset(presetMap[modelType]);
+      }
+      updateActiveTwinTelemetry();
+    }
+
+    function switchTwinSubtab(subtab) {
+      const codePanel = document.getElementById('twin-panel-code');
+      const manualPanel = document.getElementById('twin-panel-manual');
+      const codeBtn = document.getElementById('twin-tab-code-btn');
+      const manualBtn = document.getElementById('twin-tab-manual-btn');
+
+      if (subtab === 'code') {
+        if (codePanel) { codePanel.classList.remove('hidden'); codePanel.classList.add('flex'); }
+        if (manualPanel) { manualPanel.classList.add('hidden'); manualPanel.classList.remove('flex'); }
+        if (codeBtn) {
+          codeBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm cursor-pointer transition';
+        }
+        if (manualBtn) {
+          manualBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition';
+        }
+      } else {
+        if (codePanel) { codePanel.classList.add('hidden'); codePanel.classList.remove('flex'); }
+        if (manualPanel) { manualPanel.classList.remove('hidden'); manualPanel.classList.add('flex'); }
+        if (manualBtn) {
+          manualBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm cursor-pointer transition';
+        }
+        if (codeBtn) {
+          codeBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-slate-400 hover:text-slate-200 cursor-pointer transition';
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function setArmJointValues(j1, j2, j3, j4, j5) {
       if (!armJoints.j1) return;
       const deg2rad = Math.PI / 180;
-      const j1 = parseFloat(document.getElementById('j1-slider').value) || 0;
-      const j2 = parseFloat(document.getElementById('j2-slider').value) || 0;
-      const j3 = parseFloat(document.getElementById('j3-slider').value) || 0;
-      const j4 = parseFloat(document.getElementById('j4-slider').value) || 0;
-      const j5 = parseFloat(document.getElementById('j5-slider').value) || 0;
 
-      document.getElementById('j1-val').innerText = `${j1.toFixed(0)}°`;
-      document.getElementById('j2-val').innerText = `${j2.toFixed(0)}°`;
-      document.getElementById('j3-val').innerText = `${j3.toFixed(0)}°`;
-      document.getElementById('j4-val').innerText = `${j4.toFixed(0)}°`;
-      document.getElementById('j5-val').innerText = `${j5.toFixed(0)}°`;
+      // Check safety kinematic bounds
+      const limits = { j1: [-180, 180], j2: [-90, 90], j3: [-150, 150], j4: [-110, 110], j5: [-180, 180] };
+      const vals = { j1, j2, j3, j4, j5 };
+      let breach = false;
+      for (const [k, [min, max]] of Object.entries(limits)) {
+        if (vals[k] < min || vals[k] > max) breach = true;
+      }
+      setInterlockState(breach);
 
       armJoints.j1.rotation.y = j1 * deg2rad;
       armJoints.j2.rotation.z = j2 * deg2rad;
@@ -3363,15 +4250,144 @@
       armJoints.j4.rotation.z = j4 * deg2rad;
       armJoints.j5.rotation.y = j5 * deg2rad;
 
-      // Calculate tool world position
-      if (toolAxes) {
-        toolAxes.updateMatrixWorld();
-        const worldPos = new THREE.Vector3();
-        toolAxes.getWorldPosition(worldPos);
+      const j1El = document.getElementById('j1-val');
+      if (j1El) {
+        document.getElementById('j1-val').innerText = `${j1.toFixed(0)}°`;
+        document.getElementById('j2-val').innerText = `${j2.toFixed(0)}°`;
+        document.getElementById('j3-val').innerText = `${j3.toFixed(0)}°`;
+        document.getElementById('j4-val').innerText = `${j4.toFixed(0)}°`;
+        document.getElementById('j5-val').innerText = `${j5.toFixed(0)}°`;
+        document.getElementById('j1-slider').value = j1;
+        document.getElementById('j2-slider').value = j2;
+        document.getElementById('j3-slider').value = j3;
+        document.getElementById('j4-slider').value = j4;
+        document.getElementById('j5-slider').value = j5;
+      }
+      updateActiveTwinTelemetry();
+    }
 
-        document.getElementById('pose-x').innerText = worldPos.x.toFixed(3);
-        document.getElementById('pose-y').innerText = worldPos.z.toFixed(3); // Map Three Z to robotics Y
-        document.getElementById('pose-z').innerText = worldPos.y.toFixed(3); // Map Three Y to robotics Z
+    function setGripperPosition(ratio) {
+      const r = Math.max(0, Math.min(1, ratio));
+      if (gripperFingers.left && gripperFingers.right) {
+        gripperFingers.left.position.x = -0.02 - r * 0.035;
+        gripperFingers.right.position.x = 0.02 + r * 0.035;
+      }
+      const valEl = document.getElementById('gripper-val');
+      if (valEl) valEl.innerText = r > 0.05 ? `${(r * 100).toFixed(0)}% (Open)` : '0.0 (Closed)';
+    }
+
+    function updateArmJoints() {
+      const j1 = parseFloat(document.getElementById('j1-slider').value) || 0;
+      const j2 = parseFloat(document.getElementById('j2-slider').value) || 0;
+      const j3 = parseFloat(document.getElementById('j3-slider').value) || 0;
+      const j4 = parseFloat(document.getElementById('j4-slider').value) || 0;
+      const j5 = parseFloat(document.getElementById('j5-slider').value) || 0;
+      setArmJointValues(j1, j2, j3, j4, j5);
+    }
+
+    function updateGripperManual(val) {
+      setGripperPosition(val / 100);
+    }
+
+    function updateAmrManual() {
+      const vx = parseFloat(document.getElementById('amr-vx-slider').value) || 0;
+      const wz = parseFloat(document.getElementById('amr-wz-slider').value) || 0;
+      document.getElementById('amr-vx-val').innerText = `${vx.toFixed(1)} m/s`;
+      document.getElementById('amr-wz-val').innerText = `${wz.toFixed(1)} rad/s`;
+      if (amrGroup) {
+        amrGroup.position.x += vx * 0.02;
+        amrGroup.rotation.y += wz * 0.02;
+      }
+      updateActiveTwinTelemetry();
+    }
+
+    function updateQuadrupedManual() {
+      const pitch = (parseFloat(document.getElementById('quad-pitch-slider').value) || 0) * (Math.PI / 180);
+      const roll = (parseFloat(document.getElementById('quad-roll-slider').value) || 0) * (Math.PI / 180);
+      const h = parseFloat(document.getElementById('quad-height-slider').value) || 0.32;
+      document.getElementById('quad-pitch-val').innerText = `${(pitch * 180 / Math.PI).toFixed(0)}°`;
+      document.getElementById('quad-roll-val').innerText = `${(roll * 180 / Math.PI).toFixed(0)}°`;
+      document.getElementById('quad-height-val').innerText = `${h.toFixed(2)} m`;
+      if (quadrupedGroup) {
+        quadrupedGroup.position.y = h - 0.32;
+        quadrupedGroup.rotation.x = roll;
+        quadrupedGroup.rotation.z = pitch;
+      }
+      updateActiveTwinTelemetry();
+    }
+
+    function updateRoverManual() {
+      const steer = (parseFloat(document.getElementById('rover-steer-slider').value) || 0) * (Math.PI / 180);
+      const spd = parseFloat(document.getElementById('rover-speed-slider').value) || 0;
+      document.getElementById('rover-steer-val').innerText = `${(steer * 180 / Math.PI).toFixed(0)}°`;
+      document.getElementById('rover-speed-val').innerText = `${spd.toFixed(1)} m/s`;
+      if (roverWheels.steerL) roverWheels.steerL.rotation.y = steer * 1.1;
+      if (roverWheels.steerR) roverWheels.steerR.rotation.y = steer * 0.9;
+      if (roverGroup) roverGroup.position.x += spd * 0.02;
+      updateActiveTwinTelemetry();
+    }
+
+    function updateDroneManual() {
+      const alt = parseFloat(document.getElementById('drone-alt-slider').value) || 0;
+      const yaw = (parseFloat(document.getElementById('drone-yaw-slider').value) || 0) * (Math.PI / 180);
+      document.getElementById('drone-alt-val').innerText = `${alt.toFixed(1)} m`;
+      document.getElementById('drone-yaw-val').innerText = `${(yaw * 180 / Math.PI).toFixed(0)}°`;
+      if (droneGroup) {
+        droneGroup.position.y = alt;
+        droneGroup.rotation.y = yaw;
+      }
+      updateActiveTwinTelemetry();
+    }
+
+    function updateActiveTwinTelemetry() {
+      const coordsEl = document.getElementById('twin-hud-coords');
+      const extraEl = document.getElementById('twin-hud-extra');
+      if (!coordsEl) return;
+
+      if (activeTwinModel === 'arm' && toolAxes) {
+        toolAxes.updateMatrixWorld();
+        const pos = new THREE.Vector3();
+        toolAxes.getWorldPosition(pos);
+        coordsEl.innerText = `Pose: X ${pos.x.toFixed(3)}m | Y ${pos.z.toFixed(3)}m | Z ${pos.y.toFixed(3)}m`;
+        const j1 = document.getElementById('j1-slider')?.value || 0;
+        const j2 = document.getElementById('j2-slider')?.value || 0;
+        const j3 = document.getElementById('j3-slider')?.value || 0;
+        extraEl.innerText = `J1: ${j1}° | J2: ${j2}° | J3: ${j3}°`;
+        const px = document.getElementById('pose-x');
+        if (px) {
+          document.getElementById('pose-x').innerText = pos.x.toFixed(3);
+          document.getElementById('pose-y').innerText = pos.z.toFixed(3);
+          document.getElementById('pose-z').innerText = pos.y.toFixed(3);
+        }
+      } else if (activeTwinModel === 'amr' && amrGroup) {
+        coordsEl.innerText = `Pos: X ${amrGroup.position.x.toFixed(2)}m | Z ${amrGroup.position.z.toFixed(2)}m | Theta ${(amrGroup.rotation.y * 180 / Math.PI).toFixed(0)}°`;
+        extraEl.innerText = 'LiDAR: 360° Scan (NOMINAL)';
+      } else if (activeTwinModel === 'quadruped' && quadrupedGroup) {
+        coordsEl.innerText = `Attitude: Pitch ${(quadrupedGroup.rotation.z * 180 / Math.PI).toFixed(0)}° | Roll ${(quadrupedGroup.rotation.x * 180 / Math.PI).toFixed(0)}°`;
+        extraEl.innerText = 'Gait: 4-Point Stance (Trot Ready)';
+      } else if (activeTwinModel === 'rover' && roverGroup) {
+        coordsEl.innerText = `Pos X ${roverGroup.position.x.toFixed(2)}m | Steer ${(roverWheels.steerL ? roverWheels.steerL.rotation.y * 180 / Math.PI : 0).toFixed(0)}°`;
+        extraEl.innerText = 'Suspension: Dynamic 4WD';
+      } else if (activeTwinModel === 'drone' && droneGroup) {
+        coordsEl.innerText = `Altitude: ${droneGroup.position.y.toFixed(2)}m | Heading ${(droneGroup.rotation.y * 180 / Math.PI).toFixed(0)}°`;
+        extraEl.innerText = 'Rotors: 4x 6200 RPM (Armed)';
+      }
+    }
+
+    function setInterlockState(isFault, message = '') {
+      twinInterlockTripped = isFault;
+      const badge = document.getElementById('twin-hud-interlock');
+      const text = document.getElementById('twin-interlock-text');
+      if (!badge || !text) return;
+
+      if (isFault) {
+        badge.className = 'bg-red-950/90 backdrop-blur-md border border-red-500/50 px-3 py-1.5 rounded-lg text-[10px] font-mono text-red-300 font-bold flex items-center gap-1.5 shadow-lg pointer-events-auto animate-pulse';
+        text.innerText = message || 'SAFETY FAULT: LIMIT BREACH';
+        if (amrComponents.bumperMesh) amrComponents.bumperMesh.material.color.setHex(0xef4444);
+      } else {
+        badge.className = 'bg-emerald-950/85 backdrop-blur-md border border-emerald-500/40 px-3 py-1.5 rounded-lg text-[10px] font-mono text-emerald-300 font-bold flex items-center gap-1.5 shadow-lg pointer-events-auto';
+        text.innerText = 'INTERLOCK: NOMINAL';
+        if (amrComponents.bumperMesh) amrComponents.bumperMesh.material.color.setHex(0x06b6d4);
       }
     }
 
@@ -3380,6 +4396,7 @@
         twinCamera.position.set(2.4, 2.0, 2.8);
         twinControls.target.set(0, 0.4, 0);
         twinControls.update();
+        twinLog('[VIEW] 3D Camera view reset to nominal isometric angles.');
       }
     }
 
@@ -3388,13 +4405,694 @@
       const btn = document.getElementById('twin-demo-btn');
       if (isTwinAnimating) {
         btn.innerHTML = '<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Stop Demo</span>';
-        btn.className = 'px-3.5 py-1.5 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold flex items-center gap-1.5 transition';
+        btn.className = 'px-3.5 py-1.5 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer';
+        twinLog(`[TRAJECTORY] Demo continuous motion loop ENGAGED for ${activeTwinModel}.`);
       } else {
         btn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Demo Trajectory</span>';
-        btn.className = 'px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition';
+        btn.className = 'px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer';
+        twinLog('[TRAJECTORY] Demo continuous motion loop STOPPED.');
       }
       lucide.createIcons();
     }
+
+    // ==========================================
+    // PROGRAMMABLE SANDBOX SCRIPT ENGINE
+    // ==========================================
+    const TWIN_PRESETS = {
+      'arm-pick-place': `// 6-Axis Industrial Arm: Pick & Place Sequence with Gripper
+log("Initializing 6-DOF Pick & Place test sequence...");
+await setJoints(0, 20, -30, 10, 0);
+await sleep(400);
+
+log("Approaching pick target at (0.35, 0.15, 0.12)...");
+setGripper(1.0); // Open pneumatic jaws
+await setJoints(-35, 45, -60, 15, 0);
+await sleep(600);
+
+log("Grasping workpiece: Actuating pneumatic jaws [GRIP_ENGAGED]...");
+setGripper(0.0); // Close pneumatic jaws
+await sleep(500);
+
+log("Lifting payload along vertical trajectory Z+0.30m...");
+await setJoints(-35, 15, -40, 25, 0);
+await sleep(600);
+
+log("Transferring across workcell to fixture destination...");
+await setJoints(45, 25, -45, 20, 90);
+await sleep(800);
+
+log("Lowering to fixture mounting pin...");
+await setJoints(45, 45, -60, 15, 90);
+await sleep(500);
+
+log("Releasing workpiece [GRIP_RELEASED]...");
+setGripper(1.0);
+await sleep(400);
+
+log("Returning to nominal home pose. Pick & Place cycle PASSED.");
+await setJoints(0, 30, -45, 15, 0);`,
+
+      'arm-singularity': `// Arm Reachability & Singularity Scan
+log("Initiating Cartesian Reachability & Singularity Scan...");
+log("Testing joint acceleration & torque boundaries across workspace...");
+
+for (let a = -45; a <= 45; a += 15) {
+  log(\`Scanning azimuth angle \${a}°...\`);
+  await setJoints(a, 10, -20, 10, a);
+  await sleep(250);
+}
+
+log("Testing near-singularity full extension envelope...");
+await setJoints(0, 10, -5, 0, 0);
+await sleep(600);
+
+log("Checking kinematic condition number: κ = 2.41 (Singularity Free).");
+log("Returning to safe standby stance.");
+await setJoints(0, 30, -45, 15, 0);`,
+
+      'amr-patrol': `// AMR: Autonomous Waypoint Patrol & Safety Shield Decel
+log("Initializing AMR Differential Drive Waypoint Patrol...");
+log("Safety Shield sensor envelope active: d_safe = 0.50m");
+
+const waypoints = [
+  { x: 1.2, z: 0.0, speed: 0.6 },
+  { x: 1.2, z: 1.2, speed: 0.5 },
+  { x: -0.8, z: 1.2, speed: 0.6 },
+  { x: 0.0, z: 0.0, speed: 0.4 }
+];
+
+for (let i = 0; i < waypoints.length; i++) {
+  const wp = waypoints[i];
+  log(\`[WP \${i+1}/\${waypoints.length}] Navigating to (X: \${wp.x}m, Z: \${wp.z}m) at \${wp.speed} m/s...\`);
+  await driveTo(wp.x, wp.z, wp.speed);
+  await sleep(400);
+}
+
+log("Patrol cycle completed. Docking AMR at charging pad.");`,
+
+      'quadruped-trot': `// 12-DOF Quadruped: Dynamic Trot Gait & Terrain Step
+log("Initializing 12-DOF Quadruped gait engine...");
+log("Stance state: Quad-Trot | CoM Height: 0.32m");
+
+log("Executing 6 cycles of diagonal trotting gait...");
+for (let c = 0; c < 6; c++) {
+  log(\`Trot stride cycle \${c+1}/6...\`);
+  for (let s = 0; s < 10; s++) {
+    animateQuadrupedTrot(s * 0.35 + c * 3.5);
+    await sleep(45);
+  }
+}
+
+log("Testing body attitude terrain pitching: +18° nose-up...");
+setBodyPitch(18);
+await sleep(500);
+
+log("Body attitude terrain pitching: -15° nose-down...");
+setBodyPitch(-15);
+await sleep(500);
+
+log("Restoring level posture: 0° pitch, nominal trot stance.");
+setBodyPitch(0);`,
+
+      'rover-slalom': `// Rover: Ackermann Slalom & Dynamic Cornering Radius
+log("Initiating Ackermann dynamic steering slalom test...");
+log("Calculating inner vs outer wheel angles δ_in > δ_out...");
+
+const turns = [
+  { steer: -25, spd: 0.8, desc: "Sharp Port Turn" },
+  { steer: 25, spd: 0.8, desc: "Sharp Starboard Turn" },
+  { steer: -15, spd: 1.2, desc: "High-Speed Sweeper" },
+  { steer: 0, spd: 1.5, desc: "Straight Sprint" }
+];
+
+for (const t of turns) {
+  log(\`[\${t.desc}] Steering: \${t.steer}° | Throttle: \${t.spd} m/s...\`);
+  steer(t.steer);
+  throttle(t.spd);
+  await sleep(650);
+}
+
+steer(0);
+throttle(0);
+log("Ackermann slalom verification PASSED. Braking engaged.");`,
+
+      'drone-orbit': `// Drone: 3D Helical Waypoint Flight & Altitude Hold
+log("Arming quadcopter flight controller... Battery: 16.8V 4S");
+log("Spooling brushless motors to idle 2500 RPM...");
+await sleep(400);
+
+log("Taking off: Ascending to initial hover altitude 1.5m...");
+await climbTo(1.5);
+await sleep(600);
+
+log("Executing 3D circular inspection orbit around target...");
+for (let angle = 0; angle <= 360; angle += 45) {
+  const rad = angle * Math.PI / 180;
+  const x = Math.sin(rad) * 0.9;
+  const z = Math.cos(rad) * 0.9;
+  log(\`Orbit waypoint \${angle}° -> (X: \${x.toFixed(2)}, Z: \${z.toFixed(2)})...\`);
+  flyTo(x, 1.5 + Math.sin(rad) * 0.3, z, rad);
+  await sleep(350);
+}
+
+log("Returning to launch pad (RTL)...");
+flyTo(0, 1.2, 0, 0);
+await sleep(500);
+
+log("Descending smoothly to ground... Landing skids in contact.");
+await climbTo(0.0);
+log("Disarming motors. Flight trajectory routine complete.");`
+    };
+
+    function loadTwinCodePreset(presetKey) {
+      const select = document.getElementById('twin-code-preset-select');
+      if (select && select.value !== presetKey) select.value = presetKey;
+
+      const editor = document.getElementById('twin-code-editor');
+      if (editor && TWIN_PRESETS[presetKey]) {
+        editor.value = TWIN_PRESETS[presetKey];
+      }
+    }
+
+    function twinLog(msg, isError = false) {
+      const consoleEl = document.getElementById('twin-console');
+      if (!consoleEl) return;
+      const now = new Date();
+      const timeStr = `${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(Math.floor(now.getMilliseconds() / 100))}`;
+      const colorClass = isError ? 'text-red-400 font-bold' : (msg.startsWith('[') ? 'text-cyan-400' : 'text-slate-300');
+      const line = document.createElement('div');
+      line.className = `${colorClass} leading-tight`;
+      line.innerText = `[${timeStr}] ${msg}`;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function clearTwinConsole() {
+      const consoleEl = document.getElementById('twin-console');
+      if (consoleEl) {
+        consoleEl.innerHTML = '<div class="text-cyan-400/80">[SYSTEM] Digital Twin console cleared. Ready.</div>';
+      }
+    }
+
+    async function runTwinCode() {
+      if (isCodeRunning) {
+        twinLog('[WARN] Script already executing. Click Pause or Reset first.', true);
+        return;
+      }
+
+      const editor = document.getElementById('twin-code-editor');
+      const code = editor ? editor.value : '';
+      if (!code.trim()) {
+        twinLog('[WARN] Code editor is empty.', true);
+        return;
+      }
+
+      isCodeRunning = true;
+      isCodePaused = false;
+      codeAbortController = new AbortController();
+      setInterlockState(false);
+
+      const runBtn = document.getElementById('twin-code-run-btn');
+      if (runBtn) {
+        runBtn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Running...</span>';
+        runBtn.className = 'flex-1 py-1.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow transition cursor-pointer';
+        lucide.createIcons();
+      }
+
+      const statusEl = document.getElementById('twin-editor-status');
+      if (statusEl) statusEl.innerText = 'Executing Async Test...';
+
+      twinLog(`[EXEC] Starting programmable test sandbox on platform: ${activeTwinModel.toUpperCase()}`);
+
+      // Execution API sandbox
+      const api = {
+        sleep: (ms) => new Promise((resolve, reject) => {
+          if (codeAbortController.signal.aborted) return reject(new Error('ABORTED'));
+          const timer = setTimeout(() => {
+            if (isCodePaused) {
+              codeStepResolver = resolve;
+            } else {
+              resolve();
+            }
+          }, ms);
+          codeAbortController.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new Error('ABORTED'));
+          });
+        }),
+        log: (m) => twinLog(String(m)),
+        setJoints: async (j1, j2, j3, j4, j5) => {
+          setArmJointValues(j1, j2, j3, j4, j5);
+          await api.sleep(120);
+        },
+        setGripper: (ratio) => setGripperPosition(ratio),
+        driveTo: async (x, z, spd) => {
+          if (amrGroup) {
+            const steps = 15;
+            const startX = amrGroup.position.x;
+            const startZ = amrGroup.position.z;
+            for (let i = 1; i <= steps; i++) {
+              amrGroup.position.x = startX + (x - startX) * (i / steps);
+              amrGroup.position.z = startZ + (z - startZ) * (i / steps);
+              if (amrComponents.leftWheel) amrComponents.leftWheel.rotation.x += 0.2;
+              if (amrComponents.rightWheel) amrComponents.rightWheel.rotation.x += 0.2;
+              updateActiveTwinTelemetry();
+              await api.sleep(30);
+            }
+          }
+        },
+        setBodyPitch: (deg) => {
+          if (quadrupedGroup) quadrupedGroup.rotation.z = deg * Math.PI / 180;
+          updateActiveTwinTelemetry();
+        },
+        steer: (deg) => {
+          const r = deg * Math.PI / 180;
+          if (roverWheels.steerL) roverWheels.steerL.rotation.y = r * 1.1;
+          if (roverWheels.steerR) roverWheels.steerR.rotation.y = r * 0.9;
+          updateActiveTwinTelemetry();
+        },
+        throttle: (spd) => {
+          if (roverGroup) roverGroup.position.x += spd * 0.1;
+          if (roverWheels.fl) roverWheels.fl.rotation.x += spd * 0.15;
+          updateActiveTwinTelemetry();
+        },
+        climbTo: async (targetAlt) => {
+          if (droneGroup) {
+            const steps = 12;
+            const curAlt = droneGroup.position.y;
+            for (let i = 1; i <= steps; i++) {
+              droneGroup.position.y = curAlt + (targetAlt - curAlt) * (i / steps);
+              droneRotors.forEach(r => { r.rotation.y += 0.4; });
+              updateActiveTwinTelemetry();
+              await api.sleep(35);
+            }
+          }
+        },
+        flyTo: (x, y, z, yaw) => {
+          if (droneGroup) {
+            droneGroup.position.set(x, y, z);
+            droneGroup.rotation.y = yaw || 0;
+            updateActiveTwinTelemetry();
+          }
+        },
+        emergencyStop: () => {
+          estopTwinCode();
+          throw new Error('E-STOP_CALLED');
+        }
+      };
+
+      try {
+        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+        const fn = new AsyncFunction('api', `
+          const { sleep, log, setJoints, setGripper, driveTo, setBodyPitch, steer, throttle, climbTo, flyTo, emergencyStop } = api;
+          ${code}
+        `);
+        await fn(api);
+        twinLog('[COMPLETED] Test script executed successfully. All parameters verified.');
+      } catch (err) {
+        if (err.message === 'ABORTED') {
+          twinLog('[HALTED] Execution interrupted by user reset or E-stop.', true);
+        } else if (err.message === 'E-STOP_CALLED') {
+          twinLog('[E-STOP] Code requested immediate emergency halt.', true);
+        } else {
+          twinLog(`[RUNTIME ERROR] ${err.message}`, true);
+          setInterlockState(true, `EXCEPTION: ${err.message}`);
+        }
+      } finally {
+        isCodeRunning = false;
+        isCodePaused = false;
+        if (runBtn) {
+          runBtn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Run Script</span>';
+          runBtn.className = 'flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow transition cursor-pointer';
+          lucide.createIcons();
+        }
+        if (statusEl) statusEl.innerText = 'Ready | Async Execution';
+      }
+    }
+
+    function pauseTwinCode() {
+      if (!isCodeRunning) return;
+      isCodePaused = !isCodePaused;
+      const pauseBtn = document.getElementById('twin-code-pause-btn');
+      if (isCodePaused) {
+        if (pauseBtn) pauseBtn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Resume</span>';
+        twinLog('[PAUSED] Execution paused at current simulation frame.');
+      } else {
+        if (pauseBtn) pauseBtn.innerHTML = '<i data-lucide="pause" class="w-3.5 h-3.5"></i><span>Pause</span>';
+        twinLog('[RESUMED] Resuming test script execution.');
+        if (codeStepResolver) {
+          const res = codeStepResolver;
+          codeStepResolver = null;
+          res();
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function stepTwinCode() {
+      if (!isCodeRunning) {
+        twinLog('[STEP] Starting step-mode execution.');
+        runTwinCode();
+        isCodePaused = true;
+        return;
+      }
+      if (codeStepResolver) {
+        const res = codeStepResolver;
+        codeStepResolver = null;
+        twinLog('[STEP] Stepping next frame.');
+        res();
+      }
+    }
+
+    function resetTwinCode() {
+      if (codeAbortController) {
+        codeAbortController.abort();
+      }
+      isCodeRunning = false;
+      isCodePaused = false;
+      setInterlockState(false);
+
+      // Reset model to default home position
+      if (activeTwinModel === 'arm') {
+        setArmJointValues(0, 30, -45, 15, 0);
+        setGripperPosition(0);
+      } else if (activeTwinModel === 'amr' && amrGroup) {
+        amrGroup.position.set(0, 0, 0);
+        amrGroup.rotation.set(0, 0, 0);
+      } else if (activeTwinModel === 'quadruped' && quadrupedGroup) {
+        quadrupedGroup.position.set(0, 0, 0);
+        quadrupedGroup.rotation.set(0, 0, 0);
+      } else if (activeTwinModel === 'rover' && roverGroup) {
+        roverGroup.position.set(0, 0, 0);
+        roverGroup.rotation.set(0, 0, 0);
+        steer(0);
+      } else if (activeTwinModel === 'drone' && droneGroup) {
+        droneGroup.position.set(0, 0, 0);
+        droneGroup.rotation.set(0, 0, 0);
+      }
+      twinLog('[RESET] Robot model returned to initial home configuration.');
+    }
+
+    function estopTwinCode() {
+      if (codeAbortController) codeAbortController.abort();
+      isCodeRunning = false;
+      isCodePaused = false;
+      isTwinAnimating = false;
+      setInterlockState(true, 'OPERATOR EMERGENCY STOP TRIPPED');
+
+      twinLog('[E-STOP] EMERGENCY STOP ENGAGED: Actuator velocity clamped to zero. Hard interlock active.', true);
+
+      // Spoken voice feedback
+      speakVoiceResponse('Emergency stop engaged. All actuators halted.');
+    }
+
+    // ==========================================
+    // VOICE-ACTIVATED "HANDS-FREE" LAB COPILOT
+    // ==========================================
+    let isVoiceActive = false;
+    let voiceRecognition = null;
+    let voiceWakeWord = 'AOUL';
+    let isTtsEnabled = true;
+    let voiceAnimFrame = null;
+
+    function initHandsFreeVoice() {
+      // Check server voice engine status
+      fetch('/api/voice-status')
+        .then(r => r.json())
+        .then(status => {
+          const badge = document.getElementById('voice-engine-badge');
+          const desc = document.getElementById('voice-engine-desc');
+          const modelDesc = document.getElementById('voice-model-desc');
+          if (badge) {
+            badge.innerText = status.whisper_cpp_available ? 'WHISPER.CPP READY' : 'WEB SPEECH ACTIVE';
+            badge.className = status.whisper_cpp_available 
+              ? 'px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
+              : 'px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30';
+          }
+          if (desc) desc.innerText = status.active_engine;
+          if (modelDesc && status.supported_models) modelDesc.innerText = status.supported_models.join(', ');
+        })
+        .catch(() => {});
+    }
+
+    function toggleHandsFreeVoice() {
+      isVoiceActive = !isVoiceActive;
+      const btn = document.getElementById('handsfree-mic-btn');
+      const icon = document.getElementById('handsfree-mic-icon');
+      const label = document.getElementById('handsfree-status-label');
+      const hud = document.getElementById('handsfree-bench-hud');
+
+      if (isVoiceActive) {
+        if (btn) btn.className = 'px-2.5 py-1.5 text-cyan-300 bg-cyan-950/60 border-cyan-500 font-mono flex items-center gap-1.5 transition cursor-pointer shadow-sm';
+        if (icon) {
+          icon.className = 'w-3.5 h-3.5 text-cyan-400 animate-pulse';
+        }
+        if (label) label.innerText = 'Voice: ON';
+        if (hud) hud.classList.remove('hidden');
+
+        startVoiceRecognition();
+        startWaveformAnimation();
+        speakVoiceResponse('Hands-Free Lab Copilot active. Say AOUL followed by your command.');
+      } else {
+        if (btn) btn.className = 'px-2.5 py-1.5 text-slate-300 hover:text-cyan-300 hover:bg-slate-800 font-mono flex items-center gap-1.5 transition cursor-pointer';
+        if (icon) icon.className = 'w-3.5 h-3.5 text-slate-400';
+        if (label) label.innerText = 'Voice: OFF';
+        if (hud) hud.classList.add('hidden');
+
+        stopVoiceRecognition();
+        stopWaveformAnimation();
+      }
+      lucide.createIcons();
+    }
+
+    function toggleVoiceSettingsModal() {
+      const modal = document.getElementById('voice-settings-modal');
+      if (modal) modal.classList.toggle('hidden');
+    }
+
+    function toggleTtsOutput(forceVal) {
+      if (typeof forceVal === 'boolean') {
+        isTtsEnabled = forceVal;
+      } else {
+        isTtsEnabled = !isTtsEnabled;
+      }
+      const label = document.getElementById('handsfree-tts-label');
+      const toggle = document.getElementById('voice-tts-toggle');
+      if (label) label.innerText = `TTS Voice: ${isTtsEnabled ? 'ON' : 'OFF'}`;
+      if (toggle) toggle.checked = isTtsEnabled;
+    }
+
+    function startVoiceRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.warn('SpeechRecognition API not supported in this browser.');
+        const prev = document.getElementById('handsfree-transcript-preview');
+        if (prev) prev.innerText = 'SpeechRecognition API not supported. Falling back to whisper.cpp recording.';
+        return;
+      }
+
+      voiceRecognition = new SpeechRecognition();
+      voiceRecognition.continuous = true;
+      voiceRecognition.interimResults = true;
+      voiceRecognition.lang = 'en-US';
+
+      voiceRecognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        transcript = transcript.trim();
+
+        const preview = document.getElementById('handsfree-transcript-preview');
+        if (preview) preview.innerText = `Heard: "${transcript}"`;
+
+        // Check for final recognition phrase
+        const isFinal = event.results[event.results.length - 1].isFinal;
+        if (isFinal && transcript) {
+          handleVoiceCommand(transcript);
+        }
+      };
+
+      voiceRecognition.onerror = (e) => {
+        console.error('Voice recognition error:', e.error);
+        if (e.error === 'not-allowed') {
+          alert('Microphone access not permitted. Please allow microphone in browser preferences.');
+          toggleHandsFreeVoice();
+        }
+      };
+
+      voiceRecognition.onend = () => {
+        // Automatically restart if voice mode remains active
+        if (isVoiceActive) {
+          try { voiceRecognition.start(); } catch (_) {}
+        }
+      };
+
+      try {
+        voiceRecognition.start();
+      } catch (e) {
+        console.warn('Recognition start exception:', e);
+      }
+    }
+
+    function stopVoiceRecognition() {
+      if (voiceRecognition) {
+        try { voiceRecognition.stop(); } catch (_) {}
+        voiceRecognition = null;
+      }
+    }
+
+    function handleVoiceCommand(rawText) {
+      const wakeInput = document.getElementById('voice-wakeword-input');
+      const configuredWake = wakeInput ? wakeInput.value.trim().toUpperCase() : 'AOUL';
+      const upper = rawText.toUpperCase();
+
+      let commandText = rawText;
+
+      // Check wake word if configured
+      if (configuredWake) {
+        if (!upper.includes(configuredWake)) {
+          // Wake word not heard, ignore background lab noise
+          return;
+        }
+        // Strip wake-word prefix
+        const idx = upper.indexOf(configuredWake);
+        commandText = rawText.substring(idx + configuredWake.length).replace(/^[,.:\s]+/, '').trim();
+      }
+
+      const cmdLower = commandText.toLowerCase();
+      twinLog(`[VOICE INPUT] Recognized: "${commandText}"`);
+
+      // 1. Direct Emergency Stop
+      if (cmdLower.includes('emergency stop') || cmdLower.includes('stop robot') || cmdLower.includes('halt') || cmdLower === 'stop') {
+        estopTwinCode();
+        return;
+      }
+
+      // 2. Direct Simulation / Test Execution
+      if (cmdLower.includes('run simulation') || cmdLower.includes('run test') || cmdLower.includes('start test') || cmdLower.includes('execute code')) {
+        switchTab('twin');
+        runTwinCode();
+        speakVoiceResponse('Executing digital twin test script.');
+        return;
+      }
+
+      // 3. Switch 3D Robot Models
+      if (cmdLower.includes('switch to quadruped') || cmdLower.includes('robot dog') || cmdLower.includes('quadruped')) {
+        switchTab('twin');
+        switchTwinModel('quadruped');
+        speakVoiceResponse('Switched digital twin to 12-DOF Quadruped robot dog.');
+        return;
+      }
+      if (cmdLower.includes('switch to arm') || cmdLower.includes('manipulator') || cmdLower.includes('ur10')) {
+        switchTab('twin');
+        switchTwinModel('arm');
+        speakVoiceResponse('Switched digital twin to 6-DOF industrial manipulator.');
+        return;
+      }
+      if (cmdLower.includes('switch to amr') || cmdLower.includes('mobile robot') || cmdLower.includes('agv')) {
+        switchTab('twin');
+        switchTwinModel('amr');
+        speakVoiceResponse('Switched digital twin to Autonomous Mobile Robot.');
+        return;
+      }
+      if (cmdLower.includes('switch to rover')) {
+        switchTab('twin');
+        switchTwinModel('rover');
+        speakVoiceResponse('Switched digital twin to 4WD Ackermann rover.');
+        return;
+      }
+      if (cmdLower.includes('switch to drone') || cmdLower.includes('quadcopter')) {
+        switchTab('twin');
+        switchTwinModel('drone');
+        speakVoiceResponse('Switched digital twin to aerial quadcopter drone.');
+        return;
+      }
+
+      // 4. Camera Reset
+      if (cmdLower.includes('reset view') || cmdLower.includes('recenter')) {
+        resetTwinCamera();
+        speakVoiceResponse('Digital twin camera reset.');
+        return;
+      }
+
+      // 5. Code Optimization Tab Trigger
+      if (cmdLower.includes('optimize code') || cmdLower.includes('code optimizer')) {
+        switchTab('improve');
+        speakVoiceResponse('Opening Qwen robotics code optimizer.');
+        return;
+      }
+
+      // 6. Forward general robotics questions to Copilot chat
+      if (commandText.length > 3) {
+        switchTab('chat');
+        const inputEl = document.getElementById('chat-input');
+        if (inputEl) inputEl.value = commandText;
+        sendChat();
+      }
+    }
+
+    function speakVoiceResponse(text) {
+      if (!isTtsEnabled || !text || !('speechSynthesis' in window)) return;
+
+      // Clean markdown, symbols, and code fences for clear voice delivery
+      const cleanText = text
+        .replace(/```[\s\S]*?```/g, 'Code block omitted for brevity.')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/[*#_~]/g, '')
+        .replace(/\n+/g, '. ')
+        .substring(0, 320); // Cap length to keep hands-free dialogue snappy
+
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('TTS playback error:', err);
+      }
+    }
+
+    function startWaveformAnimation() {
+      const canvas = document.getElementById('voice-waveform-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let phase = 0;
+
+      function renderWave() {
+        if (!isVoiceActive) return;
+        phase += 0.08;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x++) {
+          const y = (canvas.height / 2) + Math.sin(x * 0.15 + phase) * 5 * Math.sin(x * 0.05);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        voiceAnimFrame = requestAnimationFrame(renderWave);
+      }
+      renderWave();
+    }
+
+    function stopWaveformAnimation() {
+      if (voiceAnimFrame) {
+        cancelAnimationFrame(voiceAnimFrame);
+        voiceAnimFrame = null;
+      }
+      const canvas = document.getElementById('voice-waveform-canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // Initialize Hands-Free Voice Status on Startup
+    initHandsFreeVoice();
 
     // ==========================================
     // SAFETY SHIELD MIDDLEWARE MODULE
