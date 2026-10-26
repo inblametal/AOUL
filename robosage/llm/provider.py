@@ -661,6 +661,10 @@ def get_llm_provider(
     """Factory to create appropriate LLM provider with automatic fallback detection."""
     name = (provider_name or os.environ.get("AOUL_LLM_PROVIDER", os.environ.get("ROBOSAGE_LLM_PROVIDER", "auto"))).lower()
 
+    # 0. Offline Heuristic Engine
+    if name in ("offline", "heuristic", "builtin", "rule", "rules"):
+        return OfflineRoboticsProvider()
+
     # 1. Cactus Needle 3 Edge Agent
     if name in ("cactus", "needle", "needle3", "cactus-needle", "cactus-needle-3") or (model and "needle" in str(model).lower()):
         from robosage.llm.needle_provider import CactusNeedleProvider

@@ -13,7 +13,8 @@ class TestQwenProvider(unittest.TestCase):
         self.assertEqual(qwen.model, "qwen2.5-coder:7b")
         self.assertEqual(qwen.endpoint, "http://localhost:11434")
 
-    def test_get_llm_provider_qwen(self):
+    @patch("robosage.llm.provider.get_installed_ollama_models", return_value=["qwen2.5-coder"])
+    def test_get_llm_provider_qwen(self, mock_models):
         p = get_llm_provider("qwen", model="qwen2.5-coder")
         self.assertIsInstance(p, QwenProvider)
         self.assertEqual(p.model, "qwen2.5-coder")
