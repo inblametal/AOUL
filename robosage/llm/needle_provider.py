@@ -8,6 +8,7 @@ tool calling and edge robotics control with ~100MB RAM footprint.
 
 from dataclasses import dataclass
 import os
+import re
 import sys
 import time
 from typing import Any, Callable, Dict, List, Optional
@@ -19,6 +20,46 @@ try:
     NEEDLE_AVAILABLE = True
 except (ImportError, Exception):
     NEEDLE_AVAILABLE = False
+
+
+MIN_TOOL_CONFIDENCE = 0.20
+
+
+def _is_conversational_or_help_query(text: str) -> bool:
+    """Detects if query is a greeting, capability question, or general chat rather than a direct tool command."""
+    cleaned = re.sub(r'[^a-zA-Z0-9\s]', '', text).strip().lower()
+    greetings = {"hi", "hello", "hey", "sup", "howdy", "good morning", "good evening", "greetings", "yo"}
+    if cleaned in greetings:
+        return True
+
+    help_patterns = [
+        r'\bwhat\s+(?:all\s+)?can\s+(?:you|u)\s+do\b',
+        r'\blist\s+(?:me\s+)?(?:all\s+)?(?:your\s+)?tools\b',
+        r'\blist\s+me\b',
+        r'\bwho\s+are\s+you\b',
+        r'\bcapabilities\b',
+        r'\bhelp\b',
+        r'\bwhat\s+are\s+you\b',
+        r'\bcommands\b',
+    ]
+    return any(re.search(pat, cleaned) for pat in help_patterns)
+
+
+def _build_needle_help_response(user_query: str) -> str:
+    return (
+        "### 🌵 Cactus Needle 3 Edge Agent (35.3 MB On-Device)\n"
+        "> ⚡ **Peak RAM:** `~108 MB` | **Engine:** Monarch Hadamard MLP + Engram Memory | **Role:** Edge Action Dispatch\n\n"
+        "Hello! I am **Cactus Needle 3**, a specialized ultra-compact on-device agent designed for **microsecond-to-subsecond robotics tool calling** in edge environments.\n\n"
+        "Because I am a lightweight (35 MB) action execution model rather than an open-ended conversational LLM, I specialize in **direct hardware commands, safety interventions, and robotics diagnostics**:\n\n"
+        "#### 🛠️ Direct Robotics Commands You Can Send Me:\n"
+        "- 🚨 **Emergency Stop:** `\"Stop the robot immediately!\"` or `\"Trigger emergency brake, collision ahead!\"`\n"
+        "- 🏎️ **Velocity Command:** `\"Set velocity to 0.8 m/s linear and 0.3 rad/s angular\"`\n"
+        "- 📡 **QoS Compatibility:** `\"Check QoS between best_effort publisher and reliable subscriber\"`\n"
+        "- 🔍 **Code Safety Audit:** `\"Audit robotics code in examples/buggy_node.py\"`\n"
+        "- 📋 **ROS 2 Log Triage:** `\"Triage this error log: [paste traceback]\"`\n\n"
+        "💡 **Tip for Open-Ended Robotics Discussions & Code Generation:**\n"
+        "For general robotics theory, architecture design, or writing complete nodes from scratch, toggle to **⚡ Turbo Fast (Qwen 0.5B)** or **🧠 Deep Coder (Qwen Coder)** from the top dropdown!"
+    )
 
 
 def _build_needle_tools() -> List[Callable]:
@@ -39,7 +80,7 @@ def _build_needle_tools() -> List[Callable]:
     log_analyzer = ROS2LogAnalyzer()
     loophole_detector = LoopholeDetector()
 
-    @needle.tool
+    @needle.tool(triggers=["emergency stop", "estop", "e-stop", "brake", "stop robot", "halt", "collision", "danger", "obstacle", "hazard"])
     def trigger_estop(reason: str) -> Dict[str, Any]:
         """Trigger emergency stop on robot motor drives and publish zero cmd_vel."""
         return {
@@ -51,7 +92,7 @@ def _build_needle_tools() -> List[Callable]:
             "timestamp": time.time(),
         }
 
-    @needle.tool
+    @needle.tool(triggers=["velocity", "speed", "drive", "move", "cmd_vel", "linear", "angular", "turn", "rate", "forward", "reverse"])
     def set_robot_velocity(linear_x: float, angular_z: float) -> Dict[str, Any]:
         """Send linear and angular velocity commands to mobile base."""
         # Enforce safety limits
@@ -64,7 +105,7 @@ def _build_needle_tools() -> List[Callable]:
             "safety_clamped": (clamped_x != linear_x or clamped_z != angular_z),
         }
 
-    @needle.tool
+    @needle.tool(triggers=["qos", "dds", "reliable", "best_effort", "durability", "transient_local", "volatile", "compatibility", "rxo"])
     def check_qos_compatibility_tool(
         pub_reliability: str,
         sub_reliability: str,
@@ -90,7 +131,7 @@ def _build_needle_tools() -> List[Callable]:
         except Exception as e:
             return {"is_compatible": False, "error": str(e)}
 
-    @needle.tool
+    @needle.tool(triggers=["audit", "loophole", "inspect code", "scan code", "safety audit", "race condition", "deadlock", "check code"])
     def audit_robotics_code_tool(target_path: str) -> Dict[str, Any]:
         """Performs static safety audit on ROS 2 Python/C++ code to find missing E-Stops, sensor dropouts, deadlocks, NaNs, and race conditions."""
         if os.path.isdir(target_path):
@@ -115,7 +156,7 @@ def _build_needle_tools() -> List[Callable]:
             ],
         }
 
-    @needle.tool
+    @needle.tool(triggers=["triage", "traceback", "error log", "crash", "rosout", "fatal", "extrapolation", "tf error"])
     def triage_ros_log_tool(log_content: str) -> Dict[str, Any]:
         """Analyzes ROS 2 logs, rosout, DDS errors, TF errors, or crash traces to extract root causes and code fixes."""
         incidents = log_analyzer.analyze_text(log_content)
@@ -182,6 +223,17 @@ class CactusNeedleProvider(BaseLLMProvider):
             )
             return LLMResponse(content=msg, provider="Cactus Needle 3", model=self.model)
 
+        # 1. Guardrail for conversational queries, greetings, or capability questions
+        if _is_conversational_or_help_query(prompt):
+            content = _build_needle_help_response(prompt)
+            return LLMResponse(
+                content=content,
+                provider="Cactus Needle 3 (Edge 35MB)",
+                model=self.model,
+                prompt_tokens=5,
+                completion_tokens=len(content.split()),
+            )
+
         agent = self._init_agent()
         if agent is None:
             return LLMResponse(content="Error initializing Cactus Needle 3 agent.", provider="Cactus Needle 3", model=self.model)
@@ -191,7 +243,6 @@ class CactusNeedleProvider(BaseLLMProvider):
             res = agent.run(prompt)
             duration = time.time() - t0
         except Exception as e:
-            # Fallback to complete or offline reasoning
             return LLMResponse(
                 content=f"**Cactus Needle 3 Error:** {e}\n\n*Falling back to static robotics intelligence.*",
                 provider="Cactus Needle 3",
@@ -207,6 +258,29 @@ class CactusNeedleProvider(BaseLLMProvider):
         peak_ram = res.get("peak_ram_mb", 108.0)
         prefill_tps = res.get("prefill_tps", 0.0)
 
+        # 2. If confidence is below threshold (< 20%) and no tool actually succeeded:
+        # DO NOT display false/hallucinated suppressed tool calls with nonsense arguments!
+        if not results and (confidence < MIN_TOOL_CONFIDENCE or suppressed):
+            content = (
+                f"### 🌵 Cactus Needle 3 Edge Agent\n"
+                f"> ⚡ **Execution Time:** `{duration:.2f}s` | **Peak RAM:** `{peak_ram:.1f} MB` | **Confidence:** `{confidence * 100:.1f}%` (Below action threshold)\n\n"
+                f"Needle 3 is a direct robotics function caller and did not detect a high-confidence hardware action in: *\"{prompt.strip()[:60]}\"*.\n\n"
+                f"#### 🛠️ Direct Commands You Can Run With Needle 3:\n"
+                f"- 🚨 **E-Stop:** `\"Stop the robot immediately!\"`\n"
+                f"- 🏎️ **Velocity:** `\"Set velocity to 0.8 m/s linear and 0.2 rad/s angular\"`\n"
+                f"- 📡 **QoS:** `\"Check QoS compatibility between publisher best_effort and subscriber reliable\"`\n"
+                f"- 🔍 **Audit:** `\"Audit robotics code in examples/buggy_node.py\"`\n"
+                f"- 📋 **Triage:** `\"Triage error: [paste log snippet]\"`\n\n"
+                f"💡 *Tip: For general robotics dialogue, code synthesis, or architecture questions, switch to **⚡ Turbo Fast (Qwen 0.5B)** or **🧠 Deep Coder** in the top model dropdown!*"
+            )
+            return LLMResponse(
+                content=content,
+                provider="Cactus Needle 3 (Edge 35MB)",
+                model=self.model,
+                prompt_tokens=int(prefill_tps * duration) if prefill_tps else 10,
+                completion_tokens=len(content.split()),
+            )
+
         lines = [
             f"### 🌵 Cactus Needle 3 Edge Agent",
             f"> ⚡ **Execution Time:** `{duration:.2f}s` | **Peak RAM:** `{peak_ram:.1f} MB` | **Confidence:** `{confidence * 100:.1f}%` | **Engine:** Monarch Hadamard MLP",
@@ -221,7 +295,6 @@ class CactusNeedleProvider(BaseLLMProvider):
             lines.append("#### 🛠️ Dispatched Tool Execution Results:")
             for idx, item in enumerate(results, 1):
                 if isinstance(item, dict):
-                    status = item.get("status") or item.get("is_compatible")
                     lines.append(f"```json\n{_format_dict(item)}\n```")
                 else:
                     lines.append(f"- **Result #{idx}:** `{item}`")
@@ -229,12 +302,12 @@ class CactusNeedleProvider(BaseLLMProvider):
             lines.append("#### 📞 Tool Calls Dispatched:")
             for call in function_calls:
                 lines.append(f"- **Function:** `{call.get('name')}` | **Args:** `{call.get('arguments')}`")
-        elif suppressed:
+        elif suppressed and confidence >= MIN_TOOL_CONFIDENCE:
             lines.append("#### 🛡️ Tool Calls Proposed (Pre-check Validated):")
             for call in suppressed:
                 lines.append(f"- **Action:** `{call.get('name')}` with `{call.get('arguments')}`")
         else:
-            # General query without a direct tool invocation
+            # Fallback to offline robotics provider
             from robosage.llm.provider import OfflineRoboticsProvider
             offline_prov = OfflineRoboticsProvider()
             off_resp = offline_prov.generate(prompt)

@@ -103,6 +103,36 @@ class TestCactusNeedleProvider(unittest.TestCase):
         full_text = "".join(chunks)
         self.assertIn("ESTOP_ENGAGED", full_text)
 
+    def test_conversational_greeting_and_help(self):
+        provider = CactusNeedleProvider()
+        resp_hi = provider.generate("HI")
+        self.assertIn("Cactus Needle 3 Edge Agent", resp_hi.content)
+        self.assertIn("Direct Robotics Commands", resp_hi.content)
+        self.assertNotIn("audit_robotics_code_tool with {'target_path': 'HI'}", resp_hi.content)
+
+        resp_help = provider.generate("SO whatall can u do for me list me")
+        self.assertIn("Direct Robotics Commands", resp_help.content)
+        self.assertNotIn("check_qos_compatibility_tool with", resp_help.content)
+
+    @patch("robosage.llm.needle_provider.needle.Needle")
+    def test_low_confidence_suppression_guardrail(self, mock_needle_cls):
+        mock_instance = MagicMock()
+        mock_needle_cls.return_value = mock_instance
+        # Simulate Needle 3 suppressing an ungrounded low-confidence tool call (e.g. 1.4% confidence)
+        mock_instance.run.return_value = {
+            "type": "call",
+            "success": True,
+            "confidence": 0.014,
+            "results": [],
+            "suppressed_calls": [{"name": "audit_robotics_code_tool", "arguments": {"target_path": "XYZ"}}],
+            "reasoning": "low grounding",
+        }
+
+        provider = CactusNeedleProvider()
+        resp = provider.generate("Some random non-tool question about weather")
+        self.assertIn("Below action threshold", resp.content)
+        self.assertNotIn("Tool Calls Proposed", resp.content)
+
 
 if __name__ == "__main__":
     unittest.main()
